@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+
+    <!-- START HEAD -->
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Ascot Gateway</title>
+        <!-- Favicon -->
+        <link rel="icon" type="image/x-icon" href="favicon.ico">
+        <!-- Bulma Version 1.0.0 -->
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@1.0.0/css/bulma.min.css">
+        <!-- Font Awesome 6.5.2 -->
+        <link
+          rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+          integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A=="
+          crossorigin="anonymous"
+          referrerpolicy="no-referrer"
+        >
+    </head>
+    <!-- END HEAD -->
+
+    <body>
+
+        <!-- DEVICES -->
+        <div class="container mt-5 mb-3 px-3">
+            {{#if no_devices_message}}
+            <h2 class="subtitle is-2 is-size-3-mobile has-text-black has-text-centered mt-5 px-2" style="white-space: nowrap;">{{ no_devices_message }}</h2>
+            {{else}}
+            <div class="grid">
+                {{#each devices}}
+                    <div class="cell">
+                    {{#if (eq data.kind "Light")}}
+                        {{> light }}
+                    {{/if}}
+                    {{#if (eq data.kind "Fridge")}}
+                        {{> fridge }}
+                    {{/if}}
+                    </div>
+                {{/each}}
+            </div>
+            {{/if}}
+
+            <!-- BUTTON TO DISCOVER NEW DEVICES -->
+            <form class="field is-centered has-text-centered pt-4 mt-4" action="{{ discover_route }}" method="post">
+                <p class="control">
+                    <input type="hidden" name="_method" value="put">
+                    <button class="button is-large is-size-5-mobile is-responsive is-success" type="submit">{{ discover_message }}</button>
+                </p>
+            </form>
+        </div>
+        <!-- END DEVICES -->
+
+        {{#each devices}}
+            {{#if (eq data.kind "Light")}}
+                {{> modal-light }}
+            {{/if}}
+            {{#if (eq data.kind "Fridge")}}
+                {{> modal-fridge }}
+            {{/if}}
+        {{/each}}
+
+        {{> modal-hazards }}
+
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  // Functions to open and close a modal
+  function openModal($el) {
+    $el.classList.add('is-active');
+  }
+
+  function closeModal($el) {
+    $el.classList.remove('is-active');
+  }
+
+  function closeAllModals() {
+    (document.querySelectorAll('.modal') || []).forEach(($modal) => {
+      closeModal($modal);
+    });
+  }
+
+  // Add a click event on buttons to open a specific modal
+  (document.querySelectorAll('.info-icon, .hazards') || []).forEach(($trigger) => {
+    const modal = $trigger.dataset.target;
+    const $target = document.getElementById(modal);
+
+    $trigger.addEventListener('click', () => {
+      openModal($target);
+    });
+  });
+
+  // Add a click event on various child elements to close the parent modal
+  (document.querySelectorAll('.modal-background, .modal-close, .modal-card-head .delete, .modal-card-foot .button') || []).forEach(($close) => {
+    const $target = $close.closest('.modal');
+
+    $close.addEventListener('click', () => {
+      closeModal($target);
+    });
+  });
+
+  // Add a keyboard event to close all modals
+  document.addEventListener('keydown', (event) => {
+    if(event.key === "Escape") {
+      closeAllModals();
+    }
+  });
+});
+
+</script>
+    </body>
+</html>
