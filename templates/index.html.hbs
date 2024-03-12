@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+
+    <!-- START HEAD -->
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <title>Ascot Gateway</title>
+        <!-- Favicon -->
+        <link rel="icon" type="image/x-icon" href="favicon.ico">
+        <!-- Bulma Version 0.9.4-->
+        <link rel="stylesheet" href="https://unpkg.com/bulma@0.9.4/css/bulma.min.css" />
+    </head>
+    <!-- END HEAD -->
+
+    <body>
+
+        <!-- DEVICES -->
+        <div class="container mt-4 mb-3 px-3">
+            {{#if no_devices_message}}
+            <h2 class="subtitle is-2 is-size-3-mobile has-text-black has-text-centered mt-5 px-2" style="white-space: nowrap;">{{ no_devices_message }}</h2>
+            {{else}}
+            <div class="columns is-multiline is-mobile is-centered">
+                {{#each devices}}
+                <div class="column">
+                    <div class="card">
+                        <header class="card-header has-background-success is-shadowless">
+                            <p class="card-header-title is-centered has-text-centered is-size-5-mobile">
+                                [{{device.id }}] {{ device.kind }}
+                            </p>
+                        </header>
+                        <div class="card-content has-text-centered">
+                            {{ device.console }}
+                        </div>
+                    </div>
+                </div>
+                {{/each}}
+            </div>
+            {{/if}}
+
+            <!-- BUTTON TO DISCOVER NEW DEVICES -->
+            <form class="field is-centered has-text-centered mt-3" action="{{ discover_route }}" method="post">
+                <p class="control">
+                    <input type="hidden" name="_method" value="put">
+                    <button class="button is-large is-size-5-mobile is-responsive is-success" type="submit">{{ discover_message }}</button>
+                </p>
+            </form>
+        </div>
+        <!-- END DEVICES -->
+
+    </body>
+</html>

@@ -1,0 +1,17 @@
+## Default profile.
+[default]
+address = "127.0.0.1" ## localhost address
+template_dir = "templates" ## Template directory
+port = 8080 # Server port
+
+## Smartphone profile.
+## Anyone should replace both IP and port parameter with their own values
+## in order to reach out the device where the app will be running on.
+[mobile]
+address = "0.0.0.0" # Network address
+template_dir = "templates" ## Template directory
+port = 8080 # Server port
+
+# Database configuration.
+[default.databases.devices]
+url = "db/devices.sqlite"
