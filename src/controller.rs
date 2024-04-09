@@ -4,7 +4,6 @@ use serde::Serialize;
 #[derive(Debug, Serialize)]
 pub(crate) struct Light {
     pub(crate) on: bool,
-    pub(crate) off: bool,
     pub(crate) toggle: bool,
 }
 
@@ -24,12 +23,11 @@ pub(crate) enum Controller {
     // Fridge controller.
     Fridge(Fridge),
 }
-
+// TODO: Considering device state to change controller state
 impl Controller {
     pub(crate) fn light() -> Self {
         Self::Light(Light {
             on: false,
-            off: true,
             toggle: false,
         })
     }
