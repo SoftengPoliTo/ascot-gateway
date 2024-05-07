@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::net::{IpAddr, Ipv4Addr};
+use std::net::IpAddr;
 
 use serde::{Deserialize, Serialize};
 
@@ -47,16 +47,16 @@ pub(crate) struct DeviceMetadata {
 }
 
 #[derive(Debug, Serialize)]
-pub(crate) struct Device {
+pub(crate) struct Device<'a> {
     // Metadata.
     pub(crate) metadata: DeviceMetadata,
     // Data.
-    pub(crate) data: DeviceData,
+    pub(crate) data: DeviceData<'a>,
     // Device data controller.
     pub(crate) controller: Controller,
 }
 
-impl Device {
+impl<'a> Device<'a> {
     pub(crate) fn is_recheable(&self) -> bool {
         self.metadata
             .addresses
@@ -100,7 +100,7 @@ impl DeviceBuilder {
         self
     }
 
-    pub(crate) async fn build(mut self) -> Option<Device> {
+    pub(crate) async fn build<'a>(mut self) -> Option<Device<'a>> {
         let mut device_data: Option<DeviceData> = None;
 
         // Try each address in order to connect to a device.
@@ -127,7 +127,8 @@ impl DeviceBuilder {
             // Create a device controller for each device starting from the
             // inputs.
             let controller = match data.kind {
-                DeviceKind::Light => Controller::new(inputs),
+                // Controller::light(inputs)
+                DeviceKind::Light => Controller::light(),
             };
 
             // Create a device.
@@ -139,23 +140,3 @@ impl DeviceBuilder {
         })
     }
 }
-
-/*
- * {
- *   kind: Light,
- *   routes: [
- *       "on": {
- *            route: "lights/on",
- *            description: "Turn on a light.",
- *       },
- *       "off": {
- *          route: "lights/off",
- *          description: "Turn off a light.",
- *       },
- *       "toggle": {
- *           route: "lights/toggle",
- *           description: "Toggle a light.",
- *       }
- *   ]
- *}
- */

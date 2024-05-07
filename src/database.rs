@@ -126,7 +126,9 @@ pub(crate) async fn delete_all_devices(db: &mut Connection<Devices>) -> Result<(
 }
 
 // Retrieve all devices.
-pub(crate) async fn all_devices(mut db: Connection<Devices>) -> Result<Vec<Device>, sqlx::Error> {
+pub(crate) async fn all_devices<'a>(
+    mut db: Connection<Devices>,
+) -> Result<Vec<Device<'a>>, sqlx::Error> {
     let devices_info: Vec<DeviceInfo> = sqlx::query_as(ALL_DEVICES).fetch_all(&mut **db).await?;
 
     let mut devices = Vec::new();

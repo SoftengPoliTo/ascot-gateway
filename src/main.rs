@@ -124,9 +124,10 @@ async fn devices_discovery(
 }
 
 #[get("/")]
-async fn index(db: Connection<Devices>, uri: &Origin<'_>) -> Result<Template, InternalError> {
+async fn index<'a>(db: Connection<Devices>, uri: &Origin<'_>) -> Result<Template, InternalError> {
     //let devices = query_error(all_devices(db), uri).await?;
-    let devices = vec![Device::light(), Device::fridge()];
+    let devices: Vec<Device> = Vec::new();
+    //vec![Device::light(), Device::fridge()];
     Ok(Template::render(
         "index",
         context! {
@@ -140,12 +141,12 @@ async fn index(db: Connection<Devices>, uri: &Origin<'_>) -> Result<Template, In
 }
 
 #[get("/devices")]
-async fn devices(
+async fn devices<'a>(
     db: Connection<Devices>,
     uri: &Origin<'_>,
-) -> Result<Json<Vec<Device>>, InternalError> {
+) -> Result<Json<Vec<Device<'a>>>, InternalError> {
     //let devices = query_error(all_devices(db), uri).await?;
-    let devices = vec![Device::light(), Device::fridge()];
+    let devices: Vec<Device<'a>> = Vec::new();
     Ok(Json(devices))
 }
 
