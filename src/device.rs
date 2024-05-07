@@ -7,32 +7,7 @@ use tracing::debug;
 
 use crate::controller::Controller;
 
-// Device kind.
-#[derive(Debug, Serialize, Deserialize)]
-pub(crate) enum DeviceKind {
-    // Light.
-    Light,
-    // Fridge.
-    Fridge,
-}
-
-// Route.
-#[derive(Debug, Serialize, Deserialize)]
-pub(crate) struct Route {
-    // Route.
-    route: String,
-    // Route description.
-    description: Option<String>,
-}
-
-// Data associated to a device.
-#[derive(Debug, Serialize, Deserialize)]
-pub(crate) struct DeviceData {
-    // Kind.
-    kind: DeviceKind,
-    // Every device route.
-    routes: HashMap<String, Route>,
-}
+use ascot_axum::device::{DeviceData, DeviceKind};
 
 // Device addresses.
 #[derive(Debug, Serialize, Deserialize)]
@@ -87,54 +62,6 @@ impl Device {
             .addresses
             .iter()
             .any(|address| address.recheable)
-    }
-
-    pub(crate) fn light() -> Self {
-        let mut routes = HashMap::new();
-        routes.insert(
-            "on".into(),
-            Route {
-                route: "light/on".into(),
-                description: None,
-            },
-        );
-
-        Self::create_device(DeviceKind::Light, routes, Controller::light())
-    }
-
-    pub(crate) fn fridge() -> Self {
-        let mut routes = HashMap::new();
-        routes.insert(
-            "on".into(),
-            Route {
-                route: "fridge/on".into(),
-                description: Some("Fridge is on".into()),
-            },
-        );
-
-        Self::create_device(DeviceKind::Fridge, routes, Controller::fridge())
-    }
-
-    fn create_device(
-        kind: DeviceKind,
-        routes: HashMap<String, Route>,
-        controller: Controller,
-    ) -> Self {
-        Self {
-            metadata: DeviceMetadata {
-                id: 0,
-                port: 3000,
-                scheme: "http".into(),
-                path: "dev".into(),
-                addresses: vec![DeviceAddress::new(
-                    "{}://{}:{}{}".into(),
-                    Ipv4Addr::LOCALHOST.into(),
-                )],
-                properties: HashMap::new(),
-            },
-            data: DeviceData { kind, routes },
-            controller,
-        }
     }
 }
 
@@ -194,13 +121,16 @@ impl DeviceBuilder {
 
         // If some device data has been found, create the device
         device_data.map(|data| {
-            // Create a device data controller from a device kind
+            // Analyze device data.
+            // - Save in database routes, hazards, and inputs
+
+            // Create a device controller for each device starting from the
+            // inputs.
             let controller = match data.kind {
-                DeviceKind::Light => Controller::light(),
-                DeviceKind::Fridge => Controller::fridge(),
+                DeviceKind::Light => Controller::new(inputs),
             };
 
-            // Create device.
+            // Create a device.
             Device {
                 metadata: self.0,
                 data,

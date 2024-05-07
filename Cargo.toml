@@ -29,6 +29,9 @@ serde_json = "1.0"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3.11", features = ["env-filter"] }
 
+# Ascot library
+ascot-axum = { version = "0.1.0", path = "../ascot-library" }
+
 # Openssl (needed to cross-compile the gateway for ARM)
 [target.'cfg(target_arch = "arm")'.dependencies]
 openssl = { version = "0.10.64", features = ["vendored"] }

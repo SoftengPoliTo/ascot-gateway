@@ -160,6 +160,8 @@ fn rocket() -> _ {
     // Create a daemon
     let mdns = ServiceDaemon::new().expect("Failed to create mdns daemon");
 
+    // TODO: Save hazards in memory
+
     rocket::build()
         .mount("/", routes![index, devices, devices_discovery])
         .manage(ServiceState(mdns))
