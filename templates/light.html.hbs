@@ -11,32 +11,28 @@
     </header>
     <div class="card-content has-text-centered">
         <div class="field is-grouped is-grouped-multiline is-grouped-centered">
+           {{#each device.hazards}}
            <p class="control">
-               <button class="hazards" data-target="hazard-fire">
+               <button class="hazards" data-target="hazard-{{hazard.name}}">
                    <span class="tag is-medium is-danger">
-                       Fire Hazard
+                       {{hazard.name}}
                    </span>
                </button>
            </p>
-           <p class="control">
-               <button class="hazards" data-target="hazard-energy">
-                   <span class="tag is-medium is-warning">
-                       Energy Consumption
-                   </span>
-               </button>
-           </p>
+           {{/each}}
         </div>
 
         <div class="field mt-6 is-grouped is-grouped-multiline is-grouped-centered">
+            {{#each device.inputs}}
             <p class="control">
-              <button class="button is-rounded">On</button>
+            {{#if (eq input.kind "Bool")}}
+                {{> button }}
+            {{/if}}
+            {{#if (eq input.kind "RangeF64")}}
+                {{> slider }}
+            {{/if}}
             </p>
-            <p class="control">
-              <button class="button is-rounded is-danger is-selected">Off</button>
-            </p>
-            <p class="control">
-              <button class="button is-rounded">Toggle</button>
-            </p>
+            {{/each}}
         </div>
     </div>
 </div>

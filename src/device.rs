@@ -65,9 +65,9 @@ impl<'a> Device<'a> {
     }
 }
 
-pub(crate) struct DeviceBuilder(DeviceMetadata);
+pub(crate) struct DeviceRetriever(DeviceMetadata);
 
-impl DeviceBuilder {
+impl DeviceRetriever {
     pub(crate) fn new(id: u16, port: u16, scheme: String, path: String) -> Self {
         Self(DeviceMetadata {
             id,
@@ -100,7 +100,7 @@ impl DeviceBuilder {
         self
     }
 
-    pub(crate) async fn build<'a>(mut self) -> Option<Device<'a>> {
+    pub(crate) async fn retrieve<'a>(mut self) -> Option<DeviceData<'a>> {
         let mut device_data: Option<DeviceData> = None;
 
         // Try each address in order to connect to a device.
@@ -118,25 +118,6 @@ impl DeviceBuilder {
             }
             address.recheable = false;
         }
-
-        // If some device data has been found, create the device
-        device_data.map(|data| {
-            // Analyze device data.
-            // - Save in database routes, hazards, and inputs
-
-            // Create a device controller for each device starting from the
-            // inputs.
-            let controller = match data.kind {
-                // Controller::light(inputs)
-                DeviceKind::Light => Controller::light(),
-            };
-
-            // Create a device.
-            Device {
-                metadata: self.0,
-                data,
-                controller,
-            }
-        })
+        device_data
     }
 }

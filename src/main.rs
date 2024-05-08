@@ -128,11 +128,15 @@ async fn index<'a>(db: Connection<Devices>, uri: &Origin<'_>) -> Result<Template
     //let devices = query_error(all_devices(db), uri).await?;
     let devices: Vec<Device> = Vec::new();
     //vec![Device::light(), Device::fridge()];
+    //
+
+    // TODO: Retrieves devices hazards
     Ok(Template::render(
         "index",
         context! {
           no_devices_message: devices.is_empty().then_some("No devices available!"),
           devices,
+          //hazards,
           discover_route: uri!(devices_discovery),
           discover_message: "Discover devices",
 
@@ -160,8 +164,6 @@ fn rocket() -> _ {
 
     // Create a daemon
     let mdns = ServiceDaemon::new().expect("Failed to create mdns daemon");
-
-    // TODO: Save hazards in memory
 
     rocket::build()
         .mount("/", routes![index, devices, devices_discovery])
