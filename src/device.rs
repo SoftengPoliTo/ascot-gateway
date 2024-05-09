@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::net::IpAddr;
 
 use serde::{Deserialize, Serialize};
@@ -7,7 +6,7 @@ use tracing::debug;
 
 use crate::controller::Controller;
 
-use ascot_axum::device::{DeviceData, DeviceKind};
+use ascot_axum::device::DeviceData;
 
 // Device addresses.
 #[derive(Debug, Serialize, Deserialize)]
@@ -42,21 +41,17 @@ pub(crate) struct DeviceMetadata {
     pub(crate) path: String,
     // Addresses.
     pub(crate) addresses: Vec<DeviceAddress>,
-    // Properties.
-    pub(crate) properties: HashMap<String, String>,
 }
 
 #[derive(Debug, Serialize)]
-pub(crate) struct Device<'a> {
+pub(crate) struct Device {
     // Metadata.
     pub(crate) metadata: DeviceMetadata,
-    // Data.
-    pub(crate) data: DeviceData<'a>,
     // Device data controller.
     pub(crate) controller: Controller,
 }
 
-impl<'a> Device<'a> {
+impl Device {
     pub(crate) fn is_recheable(&self) -> bool {
         self.metadata
             .addresses
@@ -65,9 +60,9 @@ impl<'a> Device<'a> {
     }
 }
 
-pub(crate) struct DeviceRetriever(DeviceMetadata);
+pub(crate) struct DeviceInfo(DeviceMetadata);
 
-impl DeviceRetriever {
+impl DeviceInfo {
     pub(crate) fn new(id: u16, port: u16, scheme: String, path: String) -> Self {
         Self(DeviceMetadata {
             id,
@@ -75,7 +70,6 @@ impl DeviceRetriever {
             scheme,
             path,
             addresses: Vec::new(),
-            properties: HashMap::new(),
         })
     }
 
@@ -95,13 +89,8 @@ impl DeviceRetriever {
         self
     }
 
-    pub(crate) fn properties(mut self, properties: HashMap<String, String>) -> Self {
-        self.0.properties = properties;
-        self
-    }
-
     pub(crate) async fn retrieve<'a>(mut self) -> Option<DeviceData<'a>> {
-        let mut device_data: Option<DeviceData> = None;
+        let mut device_info: Option<DeviceData> = None;
 
         // Try each address in order to connect to a device.
         for address in self.0.addresses.iter_mut() {
@@ -109,7 +98,7 @@ impl DeviceRetriever {
                 // When an error occurs deserializing the device information,
                 // skip it.
                 if let Ok(data) = response.json().await {
-                    device_data = Some(data);
+                    device_info = Some(data);
                     // Exit the loop as soon as data has been found
                     break;
                 } else {
@@ -118,6 +107,7 @@ impl DeviceRetriever {
             }
             address.recheable = false;
         }
-        device_data
+
+        device_info
     }
 }

@@ -24,8 +24,7 @@ use rocket_dyn_templates::{context, Template};
 use rocket_db_pools::Connection;
 
 use crate::database::{
-    all_devices, delete_all_devices, insert_device, insert_device_address, insert_device_property,
-    Devices,
+    delete_all_devices, insert_address, insert_device, insert_property, Devices,
 };
 use crate::device::Device;
 use crate::error::{query_error, InternalError};
@@ -84,13 +83,13 @@ async fn save_devices(
 
             // Save addresses
             for address in addresses {
-                query_error(insert_device_address(&mut db, address.to_string(), id), uri).await?;
+                query_error(insert_address(&mut db, address.to_string(), id), uri).await?;
             }
 
             // Save properties
             for property in properties.iter() {
                 query_error(
-                    insert_device_property(&mut db, property.key(), property.val_str(), id),
+                    insert_property(&mut db, property.key(), property.val_str(), id),
                     uri,
                 )
                 .await?;
@@ -148,9 +147,9 @@ async fn index<'a>(db: Connection<Devices>, uri: &Origin<'_>) -> Result<Template
 async fn devices<'a>(
     db: Connection<Devices>,
     uri: &Origin<'_>,
-) -> Result<Json<Vec<Device<'a>>>, InternalError> {
+) -> Result<Json<Vec<Device>>, InternalError> {
     //let devices = query_error(all_devices(db), uri).await?;
-    let devices: Vec<Device<'a>> = Vec::new();
+    let devices: Vec<Device> = Vec::new();
     Ok(Json(devices))
 }
 
