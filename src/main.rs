@@ -3,7 +3,6 @@ extern crate rocket;
 
 mod controller;
 mod database;
-mod device;
 mod error;
 
 use std::time::Duration;
@@ -24,9 +23,10 @@ use rocket_dyn_templates::{context, Template};
 use rocket_db_pools::Connection;
 
 use crate::database::{
-    delete_all_devices, insert_address, insert_device, insert_property, Devices,
+    device::{delete_all_devices, Device},
+    query::{insert_address, insert_device, insert_property},
+    Devices,
 };
-use crate::device::Device;
 use crate::error::{query_error, InternalError};
 
 // Ascot service type.
@@ -124,12 +124,16 @@ async fn devices_discovery(
 
 #[get("/")]
 async fn index<'a>(db: Connection<Devices>, uri: &Origin<'_>) -> Result<Template, InternalError> {
-    //let devices = query_error(all_devices(db), uri).await?;
+    /*let first = true;
+    let devices = if first {
+        query_error(Device::search_for_devices(db), uri).await?
+    } else {
+        query_error(Device::read_from_database(db), uri).await?
+    };*/
     let devices: Vec<Device> = Vec::new();
-    //vec![Device::light(), Device::fridge()];
-    //
 
-    // TODO: Retrieves devices hazards
+    // TODO: Retrieves devices hazards (all table)
+
     Ok(Template::render(
         "index",
         context! {
