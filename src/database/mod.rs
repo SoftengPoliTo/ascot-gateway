@@ -15,7 +15,7 @@ pub(crate) struct Devices(sqlx::SqlitePool);
 
 // Device information.
 #[derive(Debug, FromRow, Serialize, Deserialize)]
-struct Info {
+pub(super) struct Info {
     // Identifier.
     id: u16,
     // Port.
@@ -28,14 +28,14 @@ struct Info {
 
 // Device address.
 #[derive(Debug, FromRow, Serialize, Deserialize)]
-struct Address {
+pub(super) struct Address {
     // Device address.
     address: String,
 }
 
 // Device property.
 #[derive(Debug, FromRow, Serialize, Deserialize)]
-struct Property {
+pub(super) struct Property {
     // Device property key.
     key: String,
     // Device property value.
@@ -44,7 +44,7 @@ struct Property {
 
 // Device route.
 #[derive(Debug, FromRow, Serialize, Deserialize)]
-struct Route {
+pub(super) struct Route {
     // Identifier.
     id: u16,
     // Device route.
@@ -53,14 +53,14 @@ struct Route {
 
 // Device hazard.
 #[derive(Debug, FromRow, Serialize, Deserialize)]
-struct Hazard {
+pub(super) struct Hazard {
     // Device route.
     hazard: String,
 }
 
 // Device boolean input type.
 #[derive(Debug, FromRow, Serialize, Deserialize)]
-struct BooleanInput {
+pub(super) struct BooleanInput {
     // Device boolean name.
     name: String,
     // Device boolean value.
@@ -69,7 +69,7 @@ struct BooleanInput {
 
 // Device range input type for u64.
 #[derive(Debug, FromRow, Serialize, Deserialize)]
-struct RangeInputU64 {
+pub(super) struct RangeInputU64 {
     // Input name.
     name: String,
     // Minimum value.
@@ -86,7 +86,7 @@ struct RangeInputU64 {
 
 // Device range input type for f64.
 #[derive(Debug, FromRow, Serialize, Deserialize)]
-struct RangeInputF64 {
+pub(super) struct RangeInputF64 {
     // Input name.
     name: String,
     // Minimum value.

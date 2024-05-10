@@ -3,7 +3,7 @@ use std::net::IpAddr;
 use ascot_axum::device::DeviceData;
 use ascot_axum::route::InputType;
 
-use rocket_db_pools::{sqlx, sqlx::FromRow, Connection};
+use rocket_db_pools::{sqlx, Connection};
 
 use serde::{Deserialize, Serialize};
 
@@ -14,8 +14,8 @@ use crate::controller::Controller;
 use super::{Devices, RangeInputF64, RangeInputU64};
 
 use super::query::{
-    insert_boolean_input, insert_hazard, insert_rangef64_input, insert_rangeu64_input,
-    insert_route, select_device_addresses, select_device_info,
+    delete_device, insert_boolean_input, insert_hazard, insert_rangef64_input,
+    insert_rangeu64_input, insert_route, select_device_addresses, select_device_info,
 };
 
 // Device addresses.
@@ -122,51 +122,6 @@ impl DeviceInfo {
     }
 }
 
-// Delete all devices data.
-pub(crate) async fn delete_all_devices(db: &mut Connection<Devices>) -> Result<(), sqlx::Error> {
-    // Delete all booleans.
-    sqlx::query("DELETE FROM booleans")
-        .execute(&mut ***db)
-        .await?;
-
-    // Delete all u64 ranges.
-    sqlx::query("DELETE FROM rangesu64")
-        .execute(&mut ***db)
-        .await?;
-
-    // Delete all f64 ranges.
-    sqlx::query("DELETE FROM rangesf64")
-        .execute(&mut ***db)
-        .await?;
-
-    // Delete all routes.
-    sqlx::query("DELETE FROM routes")
-        .execute(&mut ***db)
-        .await?;
-
-    // Delete all properties.
-    sqlx::query("DELETE FROM properties")
-        .execute(&mut ***db)
-        .await?;
-
-    // Delete all addresses.
-    sqlx::query("DELETE FROM addresses")
-        .execute(&mut ***db)
-        .await?;
-
-    // Delete all hazards.
-    sqlx::query("DELETE FROM hazards")
-        .execute(&mut ***db)
-        .await?;
-
-    // Delete all devices.
-    sqlx::query("DELETE FROM devices")
-        .execute(&mut ***db)
-        .await?;
-
-    Ok(())
-}
-
 // Retrieve all devices for the first time.
 pub(crate) async fn first_time_devices<'a>(
     mut db: Connection<Devices>,
@@ -215,7 +170,7 @@ async fn insert_routes<'a>(
 
         // Save device hazards into database.
         for hazard in route.hazards.iter() {
-            insert_hazard(db, &hazard.name, device_id).await?;
+            insert_hazard(db, hazard.id, device_id).await?;
         }
 
         // If a route does not have an input and it is a PUT REST,
@@ -256,70 +211,5 @@ async fn insert_routes<'a>(
             }
         }
     }
-    Ok(())
-}
-
-// Delete all devices data.
-async fn delete_device(db: &mut Connection<Devices>, id: u16) -> Result<(), sqlx::Error> {
-    #[derive(FromRow, Serialize, Deserialize)]
-    struct RouteId(u16);
-
-    // Get routes id associated with the device.
-    let routes_id: Vec<RouteId> = sqlx::query_as("SELECT id FROM routes WHERE device_id = $1")
-        .bind(id)
-        .fetch_all(&mut ***db)
-        .await?;
-
-    // Delete inputs
-    for route_id in routes_id {
-        // Delete device booleans.
-        sqlx::query("DELETE FROM booleans where route_id = $1")
-            .bind(route_id.0)
-            .execute(&mut ***db)
-            .await?;
-
-        // Delete device u64 ranges.
-        sqlx::query("DELETE FROM rangesu64 where route_id = $1")
-            .bind(route_id.0)
-            .execute(&mut ***db)
-            .await?;
-
-        // Delete device f64 ranges.
-        sqlx::query("DELETE FROM rangesf64 where route_id = $1")
-            .bind(route_id.0)
-            .execute(&mut ***db)
-            .await?;
-    }
-
-    // Delete device routes.
-    sqlx::query("DELETE FROM routes WHERE device_id = $1")
-        .bind(id)
-        .execute(&mut ***db)
-        .await?;
-
-    // Delete device properties.
-    sqlx::query("DELETE FROM properties WHERE device_id = $1")
-        .bind(id)
-        .execute(&mut ***db)
-        .await?;
-
-    // Delete device addresses.
-    sqlx::query("DELETE FROM addresses WHERE device_id = $1")
-        .bind(id)
-        .execute(&mut ***db)
-        .await?;
-
-    // Delete device hazards.
-    sqlx::query("DELETE FROM hazards WHERE device_id = $1")
-        .bind(id)
-        .execute(&mut ***db)
-        .await?;
-
-    // Delete device.
-    sqlx::query("DELETE FROM devices WHERE id = $1")
-        .bind(id)
-        .execute(&mut ***db)
-        .await?;
-
     Ok(())
 }

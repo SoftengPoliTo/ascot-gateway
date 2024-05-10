@@ -23,8 +23,8 @@ use rocket_dyn_templates::{context, Template};
 use rocket_db_pools::Connection;
 
 use crate::database::{
-    device::{delete_all_devices, Device},
-    query::{insert_address, insert_device, insert_property},
+    device::Device,
+    query::{clear_database, insert_address, insert_device, insert_property},
     Devices,
 };
 use crate::error::{query_error, InternalError};
@@ -112,8 +112,8 @@ async fn devices_discovery(
         .browse(SERVICE_TYPE)
         .map_err(|e| InternalError::text(uri, &e.to_string()))?;
 
-    // Delete all old devices present in the database
-    query_error(delete_all_devices(&mut db), uri).await?;
+    // Clear the database
+    query_error(clear_database(&mut db), uri).await?;
 
     // Run in search of devices and saves them into the database.
     save_devices(receiver, db, uri).await?;
