@@ -72,11 +72,11 @@ impl<'a> Device<'a> {
             device.retrieve().await;
 
             // Retrieve device data.
-            if let Some(device_data) = device.data {
+            if let Some(ref device_data) = device.data {
                 // Insert routes.
                 Self::insert_routes(db, device.metadata.id, &device_data).await?;
                 // Build a new device for the first time.
-                //devices.push(DeviceBuilder::first_time(device.id, device_info));
+                devices.push(device);
             } else {
                 // Delete a device when it is not reachable
                 delete_device(db, device.metadata.id).await?;
