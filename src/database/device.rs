@@ -40,52 +40,14 @@ impl DeviceAddress {
 }
 
 #[derive(Debug, Serialize)]
-pub(crate) struct Device<'a> {
+pub(crate) struct DeviceInfo {
     // Metadata.
-    metadata: Metadata,
+    pub(crate) metadata: Metadata,
     // Addresses.
     pub(crate) addresses: Vec<DeviceAddress>,
-    // Device data.
-    pub(crate) data: Option<DeviceData<'a>>,
 }
 
-impl<'a> Device<'a> {
-    pub(crate) fn is_recheable(&self) -> bool {
-        self.addresses.iter().any(|address| address.recheable)
-    }
-
-    // Retrieve all devices for the first time.
-    pub(crate) async fn search_for_devices(
-        db: &mut Connection<Devices>,
-    ) -> Result<Vec<Self>, sqlx::Error> {
-        let devices_info = select_device_metadata(db).await?;
-
-        let mut devices = Vec::new();
-        for device_info in devices_info {
-            // Retrieve addresses.
-            let addresses = select_device_addresses(db, device_info.id).await?;
-
-            // Create a device.
-            let mut device = Device::new(device_info, addresses);
-
-            // Retrieve device data.
-            device.retrieve().await;
-
-            // Retrieve device data.
-            if let Some(ref device_data) = device.data {
-                // Insert routes.
-                Self::insert_routes(db, device.metadata.id, &device_data).await?;
-                // Build a new device for the first time.
-                devices.push(device);
-            } else {
-                // Delete a device when it is not reachable
-                delete_device(db, device.metadata.id).await?;
-            }
-        }
-
-        Ok(devices)
-    }
-
+impl DeviceInfo {
     fn new(metadata: Metadata, addresses: Vec<Address>) -> Self {
         let addresses = addresses
             .into_iter()
@@ -105,26 +67,75 @@ impl<'a> Device<'a> {
         Self {
             metadata,
             addresses,
-            data: None,
         }
     }
 
-    async fn retrieve(&mut self) {
+    async fn retrieve<'a>(&mut self) -> Option<DeviceData<'a>> {
         // Try each address in order to connect to a device.
         for address in self.addresses.iter_mut() {
             if let Ok(response) = reqwest::get(&address.request).await {
                 // When an error occurs deserializing the device information,
                 // skip it.
                 if let Ok(data) = response.json().await {
-                    self.data = Some(data);
-                    // Exit the loop as soon as data has been found
-                    break;
+                    return Some(data);
                 } else {
                     debug!("Deserialize error for address {:?}", address);
                 }
             }
             address.recheable = false;
         }
+        None
+    }
+}
+
+#[derive(Debug, Serialize)]
+pub(crate) struct Device<'a> {
+    // Device info.
+    pub(crate) info: DeviceInfo,
+    // Device data.
+    pub(crate) data: DeviceData<'a>,
+}
+
+impl<'a> Device<'a> {
+    pub(crate) fn new(info: DeviceInfo, data: DeviceData<'a>) -> Self {
+        Self { info, data }
+    }
+
+    pub(crate) fn is_recheable(&self) -> bool {
+        self.info.addresses.iter().any(|address| address.recheable)
+    }
+
+    // Retrieve all devices for the first time.
+    pub(crate) async fn search_for_devices(
+        db: &mut Connection<Devices>,
+    ) -> Result<Vec<Self>, sqlx::Error> {
+        let devices_info = select_device_metadata(db).await?;
+
+        let mut devices = Vec::new();
+        for device_info in devices_info {
+            // Retrieve addresses.
+            let addresses = select_device_addresses(db, device_info.id).await?;
+
+            // Define device information.
+            let mut device_info = DeviceInfo::new(device_info, addresses);
+
+            // If some data has been retrieved, complete device creation.
+            if let Some(device_data) = device_info.retrieve().await {
+                // Insert routes.
+                Self::insert_routes(db, device_info.metadata.id, &device_data).await?;
+
+                // Create device.
+                let device = Device::new(device_info, device_data);
+
+                // Save device.
+                devices.push(device);
+            } else {
+                // Delete a device when it is not reachable
+                delete_device(db, device_info.metadata.id).await?;
+            }
+        }
+
+        Ok(devices)
     }
 
     // Insert routes.
@@ -142,8 +153,7 @@ impl<'a> Device<'a> {
                 insert_hazard(db, hazard.id, device_id).await?;
             }
 
-            // If a route does not have an input and it is a PUT REST,
-            // the input is a boolean.
+            // If a route does not have an input, the input is a boolean.
             if route.data.inputs.is_empty() {
                 insert_boolean_input(db, &route.data.name, false, false, route_id).await?;
                 continue;
