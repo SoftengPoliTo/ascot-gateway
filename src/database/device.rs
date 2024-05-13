@@ -11,11 +11,11 @@ use tracing::debug;
 
 use crate::controller::Controller;
 
-use super::{Devices, RangeInputF64, RangeInputU64};
+use super::{Address, Devices, Metadata, RangeInputF64, RangeInputU64};
 
 use super::query::{
     delete_device, insert_boolean_input, insert_hazard, insert_rangef64_input,
-    insert_rangeu64_input, insert_route, select_device_addresses, select_device_info,
+    insert_rangeu64_input, insert_route, select_device_addresses, select_device_metadata,
 };
 
 // Device addresses.
@@ -40,75 +40,83 @@ impl DeviceAddress {
 }
 
 #[derive(Debug, Serialize)]
-pub(crate) struct DeviceMetadata {
-    // Identifier.
-    pub(crate) id: u16,
-    // Port.
-    pub(crate) port: u16,
-    // Scheme.
-    pub(crate) scheme: String,
-    // Resource path.
-    pub(crate) path: String,
+pub(crate) struct Device<'a> {
+    // Metadata.
+    metadata: Metadata,
     // Addresses.
     pub(crate) addresses: Vec<DeviceAddress>,
+    // Device data.
+    pub(crate) data: Option<DeviceData<'a>>,
 }
 
-#[derive(Debug, Serialize)]
-pub(crate) struct Device {
-    // Metadata.
-    pub(crate) metadata: DeviceMetadata,
-    // Device data controller.
-    pub(crate) controller: Controller,
-}
-
-impl Device {
+impl<'a> Device<'a> {
     pub(crate) fn is_recheable(&self) -> bool {
-        self.metadata
-            .addresses
-            .iter()
-            .any(|address| address.recheable)
-    }
-}
-
-pub(crate) struct DeviceInfo(DeviceMetadata);
-
-impl DeviceInfo {
-    pub(crate) fn new(id: u16, port: u16, scheme: String, path: String) -> Self {
-        Self(DeviceMetadata {
-            id,
-            port,
-            scheme,
-            path,
-            addresses: Vec::new(),
-        })
+        self.addresses.iter().any(|address| address.recheable)
     }
 
-    pub(crate) fn addresses(mut self, addresses: Vec<IpAddr>) -> Self {
-        self.0.addresses = addresses
+    // Retrieve all devices for the first time.
+    pub(crate) async fn search_for_devices(
+        db: &mut Connection<Devices>,
+    ) -> Result<Vec<Self>, sqlx::Error> {
+        let devices_info = select_device_metadata(db).await?;
+
+        let mut devices = Vec::new();
+        for device_info in devices_info {
+            // Retrieve addresses.
+            let addresses = select_device_addresses(db, device_info.id).await?;
+
+            // Create a device.
+            let mut device = Device::new(device_info, addresses);
+
+            // Retrieve device data.
+            device.retrieve().await;
+
+            // Retrieve device data.
+            if let Some(device_data) = device.data {
+                // Insert routes.
+                Self::insert_routes(db, device.metadata.id, &device_data).await?;
+                // Build a new device for the first time.
+                //devices.push(DeviceBuilder::first_time(device.id, device_info));
+            } else {
+                // Delete a device when it is not reachable
+                delete_device(db, device.metadata.id).await?;
+            }
+        }
+
+        Ok(devices)
+    }
+
+    fn new(metadata: Metadata, addresses: Vec<Address>) -> Self {
+        let addresses = addresses
             .into_iter()
-            .map(|address| {
-                DeviceAddress::new(
-                    format!(
-                        "{}://{}:{}{}",
-                        self.0.scheme, address, self.0.port, self.0.path
-                    ),
-                    address,
-                )
+            .filter_map(|a| {
+                a.address.parse().ok().map(|address| {
+                    DeviceAddress::new(
+                        format!(
+                            "{}://{}:{}{}",
+                            metadata.scheme, address, metadata.port, metadata.path
+                        ),
+                        address,
+                    )
+                })
             })
             .collect();
-        self
+
+        Self {
+            metadata,
+            addresses,
+            data: None,
+        }
     }
 
-    pub(crate) async fn retrieve<'a>(mut self) -> Option<DeviceData<'a>> {
-        let mut device_info: Option<DeviceData> = None;
-
+    async fn retrieve(&mut self) {
         // Try each address in order to connect to a device.
-        for address in self.0.addresses.iter_mut() {
+        for address in self.addresses.iter_mut() {
             if let Ok(response) = reqwest::get(&address.request).await {
                 // When an error occurs deserializing the device information,
                 // skip it.
                 if let Ok(data) = response.json().await {
-                    device_info = Some(data);
+                    self.data = Some(data);
                     // Exit the loop as soon as data has been found
                     break;
                 } else {
@@ -117,99 +125,61 @@ impl DeviceInfo {
             }
             address.recheable = false;
         }
-
-        device_info
-    }
-}
-
-// Retrieve all devices for the first time.
-pub(crate) async fn first_time_devices<'a>(
-    mut db: Connection<Devices>,
-) -> Result<Vec<Device>, sqlx::Error> {
-    let devices_info = select_device_info(&mut db).await?;
-
-    let mut devices = Vec::new();
-    for device in devices_info {
-        // Retrieve addresses.
-        let addresses = select_device_addresses(&mut db, device.id).await?;
-
-        // Retrieve device data.
-        if let Some(device_info) =
-            DeviceInfo::new(device.id, device.port, device.scheme, device.path)
-                .addresses(
-                    addresses
-                        .into_iter()
-                        .filter_map(|a| a.address.parse().ok())
-                        .collect(),
-                )
-                .retrieve()
-                .await
-        {
-            // Insert routes.
-            insert_routes(&mut db, device.id, &device_info).await?;
-            // Build a new device for the first time.
-            //devices.push(DeviceBuilder::first_time(device.id, device_info));
-        } else {
-            // Delete a device when it is not reachable
-            delete_device(&mut db, device.id).await?;
-        }
     }
 
-    Ok(devices)
-}
+    // Insert routes.
+    async fn insert_routes(
+        db: &mut Connection<Devices>,
+        device_id: u16,
+        device_data: &DeviceData<'a>,
+    ) -> Result<(), sqlx::Error> {
+        for route in device_data.routes_configs.iter() {
+            // Save device routes into database.
+            let route_id = insert_route(db, &route.data.name, device_id).await?;
 
-// Insert routes.
-async fn insert_routes<'a>(
-    db: &mut Connection<Devices>,
-    device_id: u16,
-    device_info: &DeviceData<'a>,
-) -> Result<(), sqlx::Error> {
-    for route in device_info.routes_configs.iter() {
-        // Save device routes into database.
-        let route_id = insert_route(db, &route.data.name, device_id).await?;
+            // Save device hazards into database.
+            for hazard in route.hazards.iter() {
+                insert_hazard(db, hazard.id, device_id).await?;
+            }
 
-        // Save device hazards into database.
-        for hazard in route.hazards.iter() {
-            insert_hazard(db, hazard.id, device_id).await?;
-        }
+            // If a route does not have an input and it is a PUT REST,
+            // the input is a boolean.
+            if route.data.inputs.is_empty() {
+                insert_boolean_input(db, &route.data.name, false, false, route_id).await?;
+                continue;
+            }
 
-        // If a route does not have an input and it is a PUT REST,
-        // the input is a boolean.
-        if route.data.inputs.is_empty() {
-            insert_boolean_input(db, &route.data.name, false, false, route_id).await?;
-            continue;
-        }
-
-        // Save device inputs into database.
-        for input in route.data.inputs.iter() {
-            match &input.datatype {
-                InputType::RangeU64(range) => {
-                    let range = RangeInputU64 {
-                        name: input.name.to_string(),
-                        min: range.minimum,
-                        max: range.maximum,
-                        step: range.step,
-                        default: range.default,
-                        value: range.default,
-                    };
-                    insert_rangeu64_input(db, range, route_id).await?;
-                }
-                InputType::RangeF64(range) => {
-                    let range = RangeInputF64 {
-                        name: input.name.to_string(),
-                        min: range.minimum,
-                        max: range.maximum,
-                        step: range.step,
-                        default: range.default,
-                        value: range.default,
-                    };
-                    insert_rangef64_input(db, range, route_id).await?;
-                }
-                InputType::Bool(default) => {
-                    insert_boolean_input(db, &input.name, *default, *default, route_id).await?
+            // Save device inputs into database.
+            for input in route.data.inputs.iter() {
+                match &input.datatype {
+                    InputType::RangeU64(range) => {
+                        let range = RangeInputU64 {
+                            name: input.name.to_string(),
+                            min: range.minimum,
+                            max: range.maximum,
+                            step: range.step,
+                            default: range.default,
+                            value: range.default,
+                        };
+                        insert_rangeu64_input(db, range, route_id).await?;
+                    }
+                    InputType::RangeF64(range) => {
+                        let range = RangeInputF64 {
+                            name: input.name.to_string(),
+                            min: range.minimum,
+                            max: range.maximum,
+                            step: range.step,
+                            default: range.default,
+                            value: range.default,
+                        };
+                        insert_rangef64_input(db, range, route_id).await?;
+                    }
+                    InputType::Bool(default) => {
+                        insert_boolean_input(db, &input.name, *default, *default, route_id).await?
+                    }
                 }
             }
         }
+        Ok(())
     }
-    Ok(())
 }

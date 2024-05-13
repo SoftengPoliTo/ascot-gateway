@@ -7,6 +7,9 @@ mod error;
 
 use std::time::Duration;
 
+// Ascot library
+use ascot_axum::hazards::Hazard;
+
 // Service protocol: mDNS-SD
 use mdns_sd::{Receiver, ServiceDaemon, ServiceEvent};
 
@@ -22,9 +25,11 @@ use rocket_dyn_templates::{context, Template};
 // Database
 use rocket_db_pools::Connection;
 
+use serde::Serialize;
+
 use crate::database::{
     device::Device,
-    query::{clear_database, insert_address, insert_device, insert_property},
+    query::{all_hazards, clear_database, insert_address, insert_device, insert_property},
     Devices,
 };
 use crate::error::{query_error, InternalError};
@@ -99,6 +104,29 @@ async fn save_devices(
     Ok(())
 }
 
+#[derive(Debug, Serialize)]
+struct HazardContext {
+    id: u16,
+    name: &'static str,
+}
+
+// Retrieve hazards.
+async fn get_hazards(
+    db: Connection<Devices>,
+    uri: &Origin<'_>,
+) -> Result<Vec<HazardContext>, InternalError> {
+    let hazards = query_error(all_hazards(db), uri).await?;
+    Ok(hazards
+        .into_iter()
+        .filter_map(|id| {
+            Hazard::from_id(id).map(|hazard| HazardContext {
+                id,
+                name: hazard.name(),
+            })
+        })
+        .collect())
+}
+
 // Find devices in the network and save them into the database.
 #[put("/")]
 async fn devices_discovery(
@@ -123,23 +151,27 @@ async fn devices_discovery(
 }
 
 #[get("/")]
-async fn index<'a>(db: Connection<Devices>, uri: &Origin<'_>) -> Result<Template, InternalError> {
-    /*let first = true;
-    let devices = if first {
-        query_error(Device::search_for_devices(db), uri).await?
+async fn index<'a>(
+    mut db: Connection<Devices>,
+    uri: &Origin<'_>,
+) -> Result<Template, InternalError> {
+    let first = true;
+    let devices: Vec<Device> = if first {
+        query_error(Device::search_for_devices(&mut db), uri).await?
     } else {
-        query_error(Device::read_from_database(db), uri).await?
-    };*/
-    let devices: Vec<Device> = Vec::new();
+        Vec::new()
+        //query_error(Device::read_from_database(db), uri).await?
+    };
 
-    // TODO: Retrieves devices hazards (all table)
+    // Retrieve all hazards contained in the database.
+    let hazards = get_hazards(db, uri).await?;
 
     Ok(Template::render(
         "index",
         context! {
           no_devices_message: devices.is_empty().then_some("No devices available!"),
           devices,
-          //hazards,
+          hazards,
           discover_route: uri!(devices_discovery),
           discover_message: "Discover devices",
 
@@ -147,12 +179,13 @@ async fn index<'a>(db: Connection<Devices>, uri: &Origin<'_>) -> Result<Template
     ))
 }
 
+// Return the detected devices routes for possible third-parties applications.
 #[get("/devices")]
 async fn devices<'a>(
     db: Connection<Devices>,
     uri: &Origin<'_>,
-) -> Result<Json<Vec<Device>>, InternalError> {
-    //let devices = query_error(all_devices(db), uri).await?;
+) -> Result<Json<Vec<Device<'a>>>, InternalError> {
+    //let devices = query_error(Device::obtain_routes(db), uri).await?;
     let devices: Vec<Device> = Vec::new();
     Ok(Json(devices))
 }

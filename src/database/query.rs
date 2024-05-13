@@ -1,6 +1,6 @@
 use rocket_db_pools::{sqlx, sqlx::FromRow, Connection};
 
-use super::{Address, Devices, Info, RangeInputF64, RangeInputU64};
+use super::{Address, Devices, Metadata, RangeInputF64, RangeInputU64};
 
 // Insert a device in the database returning the associated identifier.
 pub(crate) async fn insert_device(
@@ -248,17 +248,17 @@ pub(crate) async fn delete_device(
 }
 
 // Return device information.
-#[inline(always)]
-pub(crate) async fn select_device_info(
+#[inline]
+pub(crate) async fn select_device_metadata(
     db: &mut Connection<Devices>,
-) -> Result<Vec<Info>, sqlx::Error> {
+) -> Result<Vec<Metadata>, sqlx::Error> {
     sqlx::query_as("SELECT id, port, scheme, path FROM devices ORDER BY id")
         .fetch_all(&mut ***db)
         .await
 }
 
 // Return device address information.
-#[inline(always)]
+#[inline]
 pub(crate) async fn select_device_addresses(
     db: &mut Connection<Devices>,
     device_id: u16,
@@ -267,4 +267,17 @@ pub(crate) async fn select_device_addresses(
         .bind(device_id)
         .fetch_all(&mut ***db)
         .await
+}
+
+// Return all available hazards.
+#[inline]
+pub(crate) async fn all_hazards(mut db: Connection<Devices>) -> Result<Vec<u16>, sqlx::Error> {
+    #[derive(FromRow)]
+    struct HazardId(u16);
+
+    let hazards_id: Vec<HazardId> = sqlx::query_as("SELECT DISTINCT hazard_id FROM hazards")
+        .fetch_all(&mut **db)
+        .await?;
+
+    Ok(hazards_id.into_iter().map(|hazard| hazard.0).collect())
 }

@@ -13,9 +13,9 @@ use serde::{Deserialize, Serialize};
 #[database("devices")]
 pub(crate) struct Devices(sqlx::SqlitePool);
 
-// Device information.
+// Device metadata.
 #[derive(Debug, FromRow, Serialize, Deserialize)]
-pub(super) struct Info {
+pub(super) struct Metadata {
     // Identifier.
     id: u16,
     // Port.
