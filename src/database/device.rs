@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 
 use tracing::debug;
 
-use crate::controller::Controller;
+use crate::controls::Control;
 
 use super::{Address, Devices, Metadata, RangeInputF64, RangeInputU64};
 
@@ -147,7 +147,7 @@ impl<'a> Device<'a> {
         db: &mut Connection<Devices>,
         device_id: u16,
         device_data: &DeviceData<'a>,
-    ) -> Result<Vec<Inputs>, sqlx::Error> {
+    ) -> Result<Vec<Control>, sqlx::Error> {
         let mut inputs = Vec::new();
         for route in device_data.routes_configs.iter() {
             // Save device routes into database.
