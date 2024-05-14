@@ -1,14 +1,14 @@
 #[macro_use]
 extern crate rocket;
 
-mod controller;
 mod database;
 mod error;
+mod widgets;
 
 use std::time::Duration;
 
 // Ascot library
-use ascot_axum::hazards::Hazard;
+use ascot_library::hazards::Hazard;
 
 // Service protocol: mDNS-SD
 use mdns_sd::{Receiver, ServiceDaemon, ServiceEvent};
@@ -25,10 +25,8 @@ use rocket_dyn_templates::{context, Template};
 // Database
 use rocket_db_pools::Connection;
 
-use serde::Serialize;
-
 use crate::database::{
-    device::Device,
+    device::{Device, DeviceHazard},
     query::{all_hazards, clear_database, insert_address, insert_device, insert_property},
     Devices,
 };
@@ -104,26 +102,15 @@ async fn save_devices(
     Ok(())
 }
 
-#[derive(Debug, Serialize)]
-struct HazardContext {
-    id: u16,
-    name: &'static str,
-}
-
 // Retrieve hazards.
 async fn get_hazards(
     db: Connection<Devices>,
     uri: &Origin<'_>,
-) -> Result<Vec<HazardContext>, InternalError> {
+) -> Result<Vec<DeviceHazard>, InternalError> {
     let hazards = query_error(all_hazards(db), uri).await?;
     Ok(hazards
         .into_iter()
-        .filter_map(|id| {
-            Hazard::from_id(id).map(|hazard| HazardContext {
-                id,
-                name: hazard.name(),
-            })
-        })
+        .filter_map(|id| Hazard::from_id(id).map(|hazard| DeviceHazard::new(id, hazard.name())))
         .collect())
 }
 

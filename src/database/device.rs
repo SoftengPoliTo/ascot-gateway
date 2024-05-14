@@ -1,7 +1,8 @@
+use std::borrow::Cow;
 use std::net::IpAddr;
 
-use ascot_axum::device::DeviceData;
-use ascot_axum::route::InputType;
+use ascot_library::device::DeviceData;
+use ascot_library::route::InputType;
 
 use rocket_db_pools::{sqlx, Connection};
 
@@ -93,11 +94,13 @@ pub(crate) struct Device<'a> {
     // Device info.
     pub(crate) info: DeviceInfo,
     // Device data.
+    //
+    // Hazards are all here.
     pub(crate) data: DeviceData<'a>,
 }
 
 impl<'a> Device<'a> {
-    pub(crate) fn new(info: DeviceInfo, data: DeviceData<'a>) -> Self {
+    fn new(info: DeviceInfo, data: DeviceData<'a>) -> Self {
         Self { info, data }
     }
 
@@ -122,7 +125,8 @@ impl<'a> Device<'a> {
             // If some data has been retrieved, complete device creation.
             if let Some(device_data) = device_info.retrieve().await {
                 // Insert routes.
-                Self::insert_routes(db, device_info.metadata.id, &device_data).await?;
+                let hazards =
+                    Self::insert_routes(db, device_info.metadata.id, &device_data).await?;
 
                 // Create device.
                 let device = Device::new(device_info, device_data);
@@ -143,21 +147,19 @@ impl<'a> Device<'a> {
         db: &mut Connection<Devices>,
         device_id: u16,
         device_data: &DeviceData<'a>,
-    ) -> Result<(), sqlx::Error> {
+    ) -> Result<Vec<Inputs>, sqlx::Error> {
+        let mut inputs = Vec::new();
         for route in device_data.routes_configs.iter() {
             // Save device routes into database.
             let route_id = insert_route(db, &route.data.name, device_id).await?;
 
-            // Save device hazards into database.
             for hazard in route.hazards.iter() {
+                // Save device hazards into database.
                 insert_hazard(db, hazard.id, device_id).await?;
             }
 
-            // If a route does not have an input, the input is a boolean.
-            if route.data.inputs.is_empty() {
-                insert_boolean_input(db, &route.data.name, false, false, route_id).await?;
-                continue;
-            }
+            // Insert route as a boolean value.
+            insert_boolean_input(db, &route.data.name, false, false, route_id).await?;
 
             // Save device inputs into database.
             for input in route.data.inputs.iter() {
@@ -190,6 +192,6 @@ impl<'a> Device<'a> {
                 }
             }
         }
-        Ok(())
+        Ok(inputs)
     }
 }

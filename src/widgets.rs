@@ -36,3 +36,6 @@ impl Controller {
         Self::Fridge(Fridge { camera: false })
     }
 }
+
+// Search for route id associated with the route, look for inputs for the route,
+// send route.

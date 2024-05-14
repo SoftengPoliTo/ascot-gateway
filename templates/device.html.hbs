@@ -1,8 +1,8 @@
 <div class="card">
     <header class="card-header has-background-success is-shadowless">
         <p class="card-header-title is-centered has-text-centered is-size-5-mobile">
-            <font class="is-size-6-mobile">Light</font>
-            <button class="info-icon" data-target="modal-light">
+            <font class="is-size-6-mobile">{{ device.data.kind }}</font>
+            <button class="info-icon" data-target="modal-device">
                 <span class="icon has-text-white-bis is-size-6-mobile">
                     <i class="fas fa-info-circle" aria-hidden="true"></i>
                 </span>
@@ -13,7 +13,7 @@
         <div class="field is-grouped is-grouped-multiline is-grouped-centered">
            {{#each device.hazards}}
            <p class="control">
-               <button class="hazards" data-target="hazard-{{hazard.name}}">
+               <button class="hazards" data-target="hazard-{{hazard.id}}">
                    <span class="tag is-medium is-danger">
                        {{hazard.name}}
                    </span>

@@ -10,6 +10,8 @@
         <link rel="icon" type="image/x-icon" href="favicon.ico">
         <!-- Bulma Version 1.0.0 -->
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@1.0.0/css/bulma.min.css">
+        <!-- Bulma slider -->
+        <link rel="stylesheet" href="https://raw.githubusercontent.com/Wikiki/bulma-slider/master/dist/css/bulma-slider.min.css">
         <!-- Font Awesome 6.5.2 -->
         <link
           rel="stylesheet"
@@ -31,12 +33,7 @@
             <div class="grid">
                 {{#each devices}}
                     <div class="cell">
-                    {{#if (eq data.kind "Light")}}
-                        {{> light }}
-                    {{/if}}
-                    {{#if (eq data.kind "Fridge")}}
-                        {{> fridge }}
-                    {{/if}}
+                        {{> device }}
                     </div>
                 {{/each}}
             </div>
@@ -53,16 +50,9 @@
         <!-- END DEVICES -->
 
         {{#each devices}}
-            {{#if (eq data.kind "Light")}}
-                {{> modal-light }}
-            {{/if}}
-            {{#if (eq data.kind "Fridge")}}
-                {{> modal-fridge }}
-            {{/if}}
+            {{> modal-device }}
+            {{> modal-hazards }}
         {{/each}}
-
-        {{> modal-hazards }}
-
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
