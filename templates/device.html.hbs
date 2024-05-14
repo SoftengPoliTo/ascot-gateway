@@ -11,7 +11,7 @@
     </header>
     <div class="card-content has-text-centered">
         <div class="field is-grouped is-grouped-multiline is-grouped-centered">
-           {{#each device.hazards}}
+           {{#each device.data.hazards}}
            <p class="control">
                <button class="hazards" data-target="hazard-{{hazard.id}}">
                    <span class="tag is-medium is-danger">
@@ -25,11 +25,14 @@
         <div class="field mt-6 is-grouped is-grouped-multiline is-grouped-centered">
             {{#each device.inputs}}
             <p class="control">
-            {{#if (eq input.kind "Bool")}}
+            {{#if (eq input.kind "Button")}}
                 {{> button }}
             {{/if}}
-            {{#if (eq input.kind "RangeF64")}}
+            {{#if (eq input.kind "Slider")}}
                 {{> slider }}
+            {{/if}}
+            {{#if (eq input.kind "Checkbox")}}
+                {{> checkbox }}
             {{/if}}
             </p>
             {{/each}}

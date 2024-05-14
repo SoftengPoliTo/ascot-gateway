@@ -1,9 +1,9 @@
 #[macro_use]
 extern crate rocket;
 
+mod controls;
 mod database;
 mod error;
-mod widgets;
 
 use std::time::Duration;
 
@@ -26,7 +26,7 @@ use rocket_dyn_templates::{context, Template};
 use rocket_db_pools::Connection;
 
 use crate::database::{
-    device::{Device, DeviceHazard},
+    device::Device,
     query::{all_hazards, clear_database, insert_address, insert_device, insert_property},
     Devices,
 };
@@ -102,18 +102,6 @@ async fn save_devices(
     Ok(())
 }
 
-// Retrieve hazards.
-async fn get_hazards(
-    db: Connection<Devices>,
-    uri: &Origin<'_>,
-) -> Result<Vec<DeviceHazard>, InternalError> {
-    let hazards = query_error(all_hazards(db), uri).await?;
-    Ok(hazards
-        .into_iter()
-        .filter_map(|id| Hazard::from_id(id).map(|hazard| DeviceHazard::new(id, hazard.name())))
-        .collect())
-}
-
 // Find devices in the network and save them into the database.
 #[put("/")]
 async fn devices_discovery(
@@ -150,15 +138,11 @@ async fn index<'a>(
         //query_error(Device::read_from_database(db), uri).await?
     };
 
-    // Retrieve all hazards contained in the database.
-    let hazards = get_hazards(db, uri).await?;
-
     Ok(Template::render(
         "index",
         context! {
           no_devices_message: devices.is_empty().then_some("No devices available!"),
           devices,
-          hazards,
           discover_route: uri!(devices_discovery),
           discover_message: "Discover devices",
 
