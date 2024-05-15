@@ -22,13 +22,16 @@
            {{/each}}
         </div>
 
+        <form id="form-data" action="device/{{ device.info.metadata.id }}" method="post">
+        <input type="hidden" name="_method" value="put">
         <div class="field mt-6 is-grouped is-grouped-multiline is-grouped-centered">
             {{#each device.controls}}
             <p class="control">
             {{#if (eq input.kind "Button")}}
-                <button class="button {{#if input.with_state }} is-warning {{/if}}">{{ input.name }}</button>
+                <button class="button {{#if input.with_state }} is-warning {{/if}}" name="{{ input.name }}">{{ input.name }}</button>
             {{/if}}
             {{#if (eq input.kind "Slider")}}
+                <label class="label">{{ input.name }}</label>
                 <input type="range" name="{{ input.name }}" min="{{ input.min }}" max="{{ input.max }}" step="{{ input.step }}" value="{{ input.value }}">
             {{/if}}
             {{#if (eq input.kind "Checkbox")}}
@@ -40,5 +43,6 @@
             </p>
             {{/each}}
         </div>
+        </form>
     </div>
 </div>

@@ -150,15 +150,29 @@ async fn index<'a>(
     ))
 }
 
-// Return the detected devices routes for possible third-parties applications.
-#[get("/devices")]
-async fn devices<'a>(
+use rocket::form::{self, DataField, Form, FromFormField, ValueField};
+
+// Inspects changed device data.
+//
+// 1. Build a REST request to a device with the data passed as input.
+// 2. Send the request to a device with the modified data.
+// 3. Save new data into the database.
+// 4. Go to the index
+#[put("/device/<id>", data = "<input>")]
+async fn device_request<'a>(
+    id: u16,
+    input: Form<Vec<u16>>,
     db: Connection<Devices>,
     uri: &Origin<'_>,
-) -> Result<Json<Vec<Device<'a>>>, InternalError> {
-    //let devices = query_error(Device::obtain_routes(db), uri).await?;
-    let devices: Vec<Device> = Vec::new();
-    Ok(Json(devices))
+) -> Result<Redirect, InternalError> {
+    // Build a REST request from data passed as input.
+
+    // Send the request
+
+    // Save into the database the new data
+
+    // Redirect to index
+    Ok(Redirect::to(uri!(index)))
 }
 
 // Service state.
