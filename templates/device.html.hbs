@@ -23,16 +23,19 @@
         </div>
 
         <div class="field mt-6 is-grouped is-grouped-multiline is-grouped-centered">
-            {{#each device.inputs}}
+            {{#each device.controls}}
             <p class="control">
             {{#if (eq input.kind "Button")}}
-                {{> button }}
+                <button class="button {{#if input.with_state }} is-warning {{/if}}">{{ input.name }}</button>
             {{/if}}
             {{#if (eq input.kind "Slider")}}
-                {{> slider }}
+                <input type="range" name="{{ input.name }}" min="{{ input.min }}" max="{{ input.max }}" step="{{ input.step }}" value="{{ input.value }}">
             {{/if}}
             {{#if (eq input.kind "Checkbox")}}
-                {{> checkbox }}
+                <label class="checkbox">
+                <input type="checkbox" name="{{ input.name }}" value ="{{ input.value }}" />
+                    {{ input.name }}
+                </label>
             {{/if}}
             </p>
             {{/each}}
