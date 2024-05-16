@@ -23,26 +23,52 @@
         </div>
 
         <form id="form-data" action="device/{{ device.info.metadata.id }}" method="post">
-        <input type="hidden" name="_method" value="put">
-        <div class="field mt-6 is-grouped is-grouped-multiline is-grouped-centered">
+            <input type="hidden" name="_method" value="put">
+            <!-- SLIDERS -->
             {{#each device.controls}}
-            <p class="control">
-            {{#if (eq input.kind "Button")}}
-                <button class="button {{#if input.with_state }} is-warning {{/if}}" name="{{ input.name }}">{{ input.name }}</button>
-            {{/if}}
             {{#if (eq input.kind "Slider")}}
+            <div class="field mt-6 is-centered">
                 <label class="label">{{ input.name }}</label>
-                <input type="range" name="{{ input.name }}" min="{{ input.min }}" max="{{ input.max }}" step="{{ input.step }}" value="{{ input.value }}">
+                <div class="control">
+                    <input type="range" name="{{ input.name }}" min="{{ input.min }}" max="{{ input.max }}" step="{{ input.step }}" value="{{ input.value }}" onchange="sendForm()">
+                </div>
+            </div>
             {{/if}}
-            {{#if (eq input.kind "Checkbox")}}
-                <label class="checkbox">
-                <input type="checkbox" name="{{ input.name }}" value ="{{ input.value }}" />
-                    {{ input.name }}
-                </label>
-            {{/if}}
-            </p>
             {{/each}}
-        </div>
+            <!-- CHECKBOXES -->
+            <div class="field mt-6 is-grouped is-grouped-centered">
+                {{#each device.controls}}
+                {{#if (eq input.kind "Checkbox")}}
+                    <div class="control">
+                        <label class="checkbox">
+                            <input type="checkbox" name="{{ input.name }}" value ="{{ input.value }}" onclick="sendForm()">
+                            {{ input.name }}
+                        </label>
+                    </div>
+                {{/if}}
+                {{/each}}
+            </div>
+            <!-- BUTTONS -->
+            <div class="field mt-6 is-grouped is-grouped-multiline is-grouped-centered">
+                {{#each device.controls}}
+                <div class="control">
+                {{#if (eq input.kind "Button")}}
+                    <button class="button {{#if input.with_state }} is-warning {{/if}}" name="{{ input.name }}" onclick="sendForm()">{{ input.name }}</button>
+                {{/if}}
+                </div>
+                {{/each}}
+            </div>
+            <!-- SEND FORM ON CHANGE -->
+            <div hidden><input id="send-form" type="submit" value=""></div>
         </form>
     </div>
 </div>
+
+
+<script type="text/javascript">
+
+function sendForm() {
+  document.getElementById("send-form").click();
+}
+
+</script>

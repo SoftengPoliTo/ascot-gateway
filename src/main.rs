@@ -121,6 +121,8 @@ async fn devices_discovery(
     // Run in search of devices and saves them into the database.
     save_devices(receiver, db, uri).await?;
 
+    // TODO: Clean up "first time query variable"
+
     // Redirect to index
     Ok(Redirect::to(uri!(index)))
 }
@@ -150,7 +152,7 @@ async fn index<'a>(
     ))
 }
 
-use rocket::form::{self, DataField, Form, FromFormField, ValueField};
+use rocket::form::{self, DataField, Error, Errors, Form, FromForm, ValueField};
 
 // Inspects changed device data.
 //
@@ -159,7 +161,7 @@ use rocket::form::{self, DataField, Form, FromFormField, ValueField};
 // 3. Save new data into the database.
 // 4. Go to the index
 #[put("/device/<id>", data = "<input>")]
-async fn device_request<'a>(
+async fn device_request<'v>(
     id: u16,
     input: Form<Vec<u16>>,
     db: Connection<Devices>,
@@ -187,7 +189,7 @@ fn rocket() -> _ {
     let mdns = ServiceDaemon::new().expect("Failed to create mdns daemon");
 
     rocket::build()
-        .mount("/", routes![index, devices, devices_discovery])
+        .mount("/", routes![index, devices_discovery, device_request])
         .manage(ServiceState(mdns))
         .attach(database::stage())
         .attach(Template::fairing())
