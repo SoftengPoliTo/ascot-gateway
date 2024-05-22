@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 
 use tracing::debug;
 
-use crate::controls::Control;
+use crate::controls::{Button, CheckBox, Slider};
 
 use super::{Address, Devices, Metadata, RangeInputF64, RangeInputU64};
 
@@ -97,11 +97,26 @@ pub(crate) struct Device<'a> {
     //
     // Hazards are all here.
     pub(crate) data: DeviceData<'a>,
+    // Sliders u64.
+    pub(crate) sliders_u64: Vec<Slider<u64>>,
+    // Sliders f64.
+    pub(crate) sliders_f64: Vec<Slider<f64>>,
+    // Checkboxes.
+    pub(crate) checkboxes: Vec<CheckBox>,
+    // Buttons.
+    pub(crate) buttons: Vec<Button>,
 }
 
 impl<'a> Device<'a> {
     fn new(info: DeviceInfo, data: DeviceData<'a>) -> Self {
-        Self { info, data }
+        Self {
+            info,
+            data,
+            sliders_u64: Vec::new(),
+            sliders_f64: Vec::new(),
+            checkboxes: Vec::new(),
+            buttons: Vec::new(),
+        }
     }
 
     pub(crate) fn is_recheable(&self) -> bool {
@@ -124,12 +139,10 @@ impl<'a> Device<'a> {
 
             // If some data has been retrieved, complete device creation.
             if let Some(device_data) = device_info.retrieve().await {
-                // Insert routes.
-                let hazards =
-                    Self::insert_routes(db, device_info.metadata.id, &device_data).await?;
-
                 // Create device.
-                let device = Device::new(device_info, device_data);
+                let device = Device::new(device_info, device_data)
+                    .insert_routes(db)
+                    .await?;
 
                 // Save device.
                 devices.push(device);
@@ -143,13 +156,9 @@ impl<'a> Device<'a> {
     }
 
     // Insert routes.
-    async fn insert_routes(
-        db: &mut Connection<Devices>,
-        device_id: u16,
-        device_data: &DeviceData<'a>,
-    ) -> Result<Vec<Control>, sqlx::Error> {
-        let mut inputs = Vec::new();
-        for route in device_data.routes_configs.iter() {
+    async fn insert_routes(mut self, db: &mut Connection<Devices>) -> Result<Self, sqlx::Error> {
+        let device_id = self.info.metadata.id;
+        for route in self.data.routes_configs.iter() {
             // Save device routes into database.
             let route_id = insert_route(db, &route.data.name, device_id).await?;
 
@@ -158,14 +167,18 @@ impl<'a> Device<'a> {
                 insert_hazard(db, hazard.id, device_id).await?;
             }
 
-            // Insert route as a boolean value.
+            // Insert route as a boolean value into the database.
             insert_boolean_input(db, &route.data.name, false, false, route_id).await?;
+
+            // Insert button for a route.
+            self.buttons
+                .push(Button::init(Self::clean_route(&route.data.name)));
 
             // Save device inputs into database.
             for input in route.data.inputs.iter() {
                 match &input.datatype {
                     InputType::RangeU64(range) => {
-                        let range = RangeInputU64 {
+                        let range_db = RangeInputU64 {
                             name: input.name.to_string(),
                             min: range.minimum,
                             max: range.maximum,
@@ -173,10 +186,18 @@ impl<'a> Device<'a> {
                             default: range.default,
                             value: range.default,
                         };
-                        insert_rangeu64_input(db, range, route_id).await?;
+                        insert_rangeu64_input(db, range_db, route_id).await?;
+                        // Insert u64 slider.
+                        self.sliders_u64.push(Slider::<u64>::new(
+                            input.name.to_string(),
+                            range.minimum,
+                            range.maximum,
+                            range.step,
+                            range.default,
+                        ));
                     }
                     InputType::RangeF64(range) => {
-                        let range = RangeInputF64 {
+                        let range_db = RangeInputF64 {
                             name: input.name.to_string(),
                             min: range.minimum,
                             max: range.maximum,
@@ -184,14 +205,38 @@ impl<'a> Device<'a> {
                             default: range.default,
                             value: range.default,
                         };
-                        insert_rangef64_input(db, range, route_id).await?;
+                        insert_rangef64_input(db, range_db, route_id).await?;
+                        // Insert f64 slider.
+                        self.sliders_f64.push(Slider::<f64>::new(
+                            input.name.to_string(),
+                            range.minimum,
+                            range.maximum,
+                            range.step,
+                            range.default,
+                        ));
                     }
                     InputType::Bool(default) => {
-                        insert_boolean_input(db, &input.name, *default, *default, route_id).await?
+                        insert_boolean_input(db, &input.name, *default, *default, route_id).await?;
+                        self.checkboxes.push(CheckBox::new(input.name.to_string()));
                     }
                 }
             }
         }
-        Ok(inputs)
+        Ok(self)
+    }
+
+    // Clean route.
+    fn clean_route(route: &str) -> String {
+        let no_prefix = match route.strip_prefix("/") {
+            Some(no_prefix) => no_prefix,
+            None => return "<unknown>".into(),
+        };
+
+        if let Some(name) = no_prefix.split_once("/") {
+            name.0
+        } else {
+            no_prefix
+        }
+        .to_string()
     }
 }
