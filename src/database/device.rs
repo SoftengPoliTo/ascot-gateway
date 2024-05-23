@@ -217,7 +217,7 @@ impl<'a> Device<'a> {
                     }
                     InputType::Bool(default) => {
                         insert_boolean_input(db, &input.name, *default, *default, route_id).await?;
-                        self.checkboxes.push(CheckBox::new(input.name.to_string()));
+                        self.checkboxes.push(CheckBox::init(input.name.to_string()));
                     }
                 }
             }
@@ -238,5 +238,190 @@ impl<'a> Device<'a> {
             no_prefix
         }
         .to_string()
+    }
+
+    pub(crate) fn fake_device1() -> Self {
+        use ascot_library::device::DeviceKind;
+        use ascot_library::hazards::{CategoryData, HazardData};
+        use ascot_library::route::{Input, RestKind, RouteConfig, RouteData};
+        use heapless::Vec;
+
+        let mut routes_configs: Vec<RouteConfig, 16> = Vec::new();
+
+        let mut inputs: Vec<Input<'a>, 16> = Vec::new();
+        let _ = inputs.push(Input::rangef64("brightness", (0., 20., 0.1, 0.)));
+        let _ = inputs.push(Input::boolean("save-energy", false));
+
+        let mut hazards: Vec<HazardData, 16> = Vec::new();
+        let _ = hazards.push(HazardData {
+            id: 0,
+            name: "Fire Hazard".into(),
+            description: "An Hazard fire".into(),
+            category: CategoryData {
+                name: "Safety".into(),
+                description: "A safety category".into(),
+            },
+        });
+
+        let _ = hazards.push(HazardData {
+            id: 1,
+            name: "Energy Consumption".into(),
+            description: "Consuming energy".into(),
+            category: CategoryData {
+                name: "Financial".into(),
+                description: "Reduce Energy".into(),
+            },
+        });
+
+        let light_on = RouteConfig {
+            rest_kind: RestKind::Put,
+            hazards,
+            data: RouteData {
+                name: "/on/<brightness>/<save-energy>".into(),
+                description: Some("Light on".into()),
+                stateless: false,
+                inputs,
+            },
+        };
+
+        let light_off = RouteConfig {
+            rest_kind: RestKind::Put,
+            hazards: Vec::new(),
+            data: RouteData {
+                name: "/off".into(),
+                description: Some("Light off".into()),
+                stateless: false,
+                inputs: Vec::new(),
+            },
+        };
+
+        let toggle = RouteConfig {
+            rest_kind: RestKind::Put,
+            hazards: Vec::new(),
+            data: RouteData {
+                name: "/toggle".into(),
+                description: None,
+                stateless: false,
+                inputs: Vec::new(),
+            },
+        };
+
+        let _ = routes_configs.push(light_on);
+        let _ = routes_configs.push(light_off);
+        let _ = routes_configs.push(toggle);
+
+        Self {
+            info: DeviceInfo {
+                metadata: Metadata::fake1(),
+                addresses: std::vec::Vec::new(),
+            },
+            data: DeviceData {
+                kind: DeviceKind::Light,
+                main_route: "/light".into(),
+                routes_configs,
+            },
+            buttons: vec![
+                Button::init(Self::clean_route("/on/<brightness>/<save-energy>")),
+                Button::init(Self::clean_route("/off")),
+                Button::init(Self::clean_route("/toggle")),
+            ],
+            sliders_f64: vec![Slider::<f64>::new("brightness".into(), 0., 20., 0.1, 5.)],
+            sliders_u64: std::vec::Vec::new(),
+            checkboxes: vec![CheckBox::init("save-energy".into())],
+        }
+    }
+
+    pub(crate) fn fake_device2() -> Self {
+        use ascot_library::device::DeviceKind;
+        use ascot_library::hazards::{CategoryData, HazardData};
+        use ascot_library::route::{Input, RestKind, RouteConfig, RouteData};
+        use heapless::Vec;
+
+        let mut routes_configs: Vec<RouteConfig, 16> = Vec::new();
+
+        let mut inputs: Vec<Input<'a>, 16> = Vec::new();
+        let _ = inputs.push(Input::rangef64("brightness", (0., 20., 0.1, 0.)));
+        let _ = inputs.push(Input::boolean("save-energy", false));
+
+        let mut hazards: Vec<HazardData, 16> = Vec::new();
+        let _ = hazards.push(HazardData {
+            id: 0,
+            name: "Fire Hazard".into(),
+            description: "An Hazard fire".into(),
+            category: CategoryData {
+                name: "Safety".into(),
+                description: "A safety category".into(),
+            },
+        });
+
+        let _ = hazards.push(HazardData {
+            id: 1,
+            name: "Energy Consumption".into(),
+            description: "Consuming energy".into(),
+            category: CategoryData {
+                name: "Financial".into(),
+                description: "Reduce Energy".into(),
+            },
+        });
+
+        let light_on = RouteConfig {
+            rest_kind: RestKind::Put,
+            hazards,
+            data: RouteData {
+                name: "/on/<brightness>/<save-energy>".into(),
+                description: Some("Light on".into()),
+                stateless: false,
+                inputs,
+            },
+        };
+
+        let light_off = RouteConfig {
+            rest_kind: RestKind::Put,
+            hazards: Vec::new(),
+            data: RouteData {
+                name: "/off".into(),
+                description: Some("Light off".into()),
+                stateless: false,
+                inputs: Vec::new(),
+            },
+        };
+
+        let mut inputs2: Vec<Input<'a>, 16> = Vec::new();
+        let _ = inputs2.push(Input::rangeu64("dimmer", (0, 15, 1, 2)));
+
+        let toggle = RouteConfig {
+            rest_kind: RestKind::Put,
+            hazards: Vec::new(),
+            data: RouteData {
+                name: "/toggle".into(),
+                description: None,
+                stateless: false,
+                inputs: inputs2,
+            },
+        };
+
+        let _ = routes_configs.push(light_on);
+        let _ = routes_configs.push(light_off);
+        let _ = routes_configs.push(toggle);
+
+        Self {
+            info: DeviceInfo {
+                metadata: Metadata::fake1(),
+                addresses: std::vec::Vec::new(),
+            },
+            data: DeviceData {
+                kind: DeviceKind::Light,
+                main_route: "/light".into(),
+                routes_configs,
+            },
+            buttons: vec![
+                Button::init(Self::clean_route("/on/<brightness>/<save-energy>")),
+                Button::init(Self::clean_route("/off")),
+                Button::init(Self::clean_route("/toggle/:dimmer")),
+            ],
+            sliders_f64: vec![Slider::<f64>::new("brightness".into(), 0., 20., 0.1, 5.)],
+            sliders_u64: vec![Slider::<u64>::new("dimmer".into(), 0, 15, 1, 2)],
+            checkboxes: vec![CheckBox::init("save-energy".into())],
+        }
     }
 }

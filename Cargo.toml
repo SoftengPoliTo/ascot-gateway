@@ -14,7 +14,7 @@ mdns-sd = "0.10.4"
 reqwest = { version = "0.12", features = ["json"] }
 
 # Web app
-rocket = { version = "0.5.0", features = ["json"] }
+rocket = { version = "0.5.0", features = ["json", "secrets"] }
 rocket_dyn_templates = { version = "0.1.0", features = ["handlebars"] }
 
 # Database
@@ -31,6 +31,8 @@ tracing-subscriber = { version = "0.3.11", features = ["env-filter"] }
 
 # Ascot library
 ascot-library = { version = "0.1.0", path = "../ascot-library" }
+
+heapless = { version = "0.8.0", features = ["serde"] }
 
 # Openssl (needed to cross-compile the gateway for ARM)
 [target.'cfg(target_arch = "arm")'.dependencies]

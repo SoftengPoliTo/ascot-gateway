@@ -3,6 +3,11 @@
 address = "127.0.0.1" ## localhost address
 template_dir = "templates" ## Template directory
 port = 8080 # Server port
+# Secret configuration.
+#
+# As example, it has been used the one present in the `examples/cookie`
+# directory on the Rocket repository.
+secret_key = "itlYmFR2vYKrOmFhupMIn/hyB6lYCCTXz4yaQX89XVg="
 
 ## Smartphone profile.
 ## Anyone should replace both IP and port parameter with their own values

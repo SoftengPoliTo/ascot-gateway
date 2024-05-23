@@ -7,16 +7,13 @@ mod error;
 
 use std::time::Duration;
 
-// Ascot library
-use ascot_library::hazards::Hazard;
-
 // Service protocol: mDNS-SD
-use mdns_sd::{Receiver, ServiceDaemon, ServiceEvent};
+use mdns_sd::{Receiver, ServiceDaemon, ServiceEvent, ServiceInfo};
 
 // Web app
 use rocket::http::uri::Origin;
+use rocket::http::CookieJar;
 use rocket::response::Redirect;
-use rocket::serde::json::Json;
 use rocket::State;
 
 // Templates engine
@@ -25,9 +22,12 @@ use rocket_dyn_templates::{context, Template};
 // Database
 use rocket_db_pools::Connection;
 
+// Tracing
+use tracing::warn;
+
 use crate::database::{
     device::Device,
-    query::{all_hazards, clear_database, insert_address, insert_device, insert_property},
+    query::{clear_database, insert_address, insert_device, insert_property},
     Devices,
 };
 use crate::error::{query_error, InternalError};
@@ -45,83 +45,111 @@ const DEFAULT_SCHEME: &str = "http";
 // at URLs consistent well-known locations across servers.
 const WELL_KNOWN_URI: &str = "/.well-known/ascot";
 
-// Save discovered devices in database.
-async fn save_devices(
-    receiver: Receiver<ServiceEvent>,
-    mut db: Connection<Devices>,
-    uri: &Origin<'_>,
-) -> Result<(), InternalError> {
-    // Run for 1 second in search of devices and saves them into the database.
+// Cookies key
+const DB: &str = "db";
+
+// Search ascot devices.
+async fn search_devices(receiver: Receiver<ServiceEvent>) -> Vec<ServiceInfo> {
+    let mut devices_info = Vec::new();
+    // Run for 1 second in search of devices and returns their information.
     while let Ok(event) = receiver.recv_timeout(Duration::from_secs(1)) {
         if let ServiceEvent::ServiceResolved(info) = event {
-            // Device addresses
-            let addresses = info.get_addresses();
-
             // Check whether there are device addresses.
             //
-            // If no address has been found, return an error.
-            if addresses.is_empty() {
-                return Err(InternalError::text(uri, "No device address available"));
+            // If no address has been found, prints a warning and continue the
+            // loop.
+            if info.get_addresses().is_empty() {
+                // TODO: We should implement a logger to show this messages
+                // directly in the gateway.
+                warn!("No device address available for {:?}", info);
+                continue;
             }
 
-            // Device properties.
-            let properties = info.get_properties();
-            // Internet scheme.
-            //
-            // If no scheme has been found, use `http` as default scheme.
-            let scheme = properties
-                .get_property_val_str("scheme")
-                .unwrap_or(DEFAULT_SCHEME);
-            // Resource path.
-            //
-            // If no path has been found, use the well-known URI as default
-            // path.
-            let path = properties
-                .get_property_val_str("path")
-                .unwrap_or(WELL_KNOWN_URI);
+            // Save discovered devices information.
+            devices_info.push(info);
+        }
+    }
+    devices_info
+}
 
-            // Insert device into the database and get back its identifier
-            let id =
-                query_error(insert_device(&mut db, info.get_port(), scheme, path), uri).await?;
+// Save discovered devices into the database.
+async fn save_devices(
+    mut db: Connection<Devices>,
+    devices_info: Vec<ServiceInfo>,
+    uri: &Origin<'_>,
+) -> Result<(), InternalError> {
+    for info in devices_info {
+        // Device properties.
+        let properties = info.get_properties();
 
-            // Save addresses
-            for address in addresses {
-                query_error(insert_address(&mut db, address.to_string(), id), uri).await?;
-            }
+        // Internet scheme.
+        //
+        // If no scheme has been found, use `http` as default scheme.
+        let scheme = properties
+            .get_property_val_str("scheme")
+            .unwrap_or(DEFAULT_SCHEME);
 
-            // Save properties
-            for property in properties.iter() {
-                query_error(
-                    insert_property(&mut db, property.key(), property.val_str(), id),
-                    uri,
-                )
-                .await?;
-            }
+        // Resource path.
+        //
+        // If no path has been found, use the well-known URI as default
+        // path.
+        let path = properties
+            .get_property_val_str("path")
+            .unwrap_or(WELL_KNOWN_URI);
+
+        // Insert device into the database and get back its identifier
+        let id = query_error(insert_device(&mut db, info.get_port(), scheme, path), uri).await?;
+
+        // Save addresses
+        for address in info.get_addresses() {
+            query_error(insert_address(&mut db, address.to_string(), id), uri).await?;
+        }
+
+        // Save properties
+        for property in properties.iter() {
+            query_error(
+                insert_property(&mut db, property.key(), property.val_str(), id),
+                uri,
+            )
+            .await?;
         }
     }
     Ok(())
 }
 
-// Find devices in the network and save them into the database.
+// Find devices in the network and
+// save their metadata into the database.
 #[put("/")]
 async fn devices_discovery(
     state: &State<ServiceState>,
     mut db: Connection<Devices>,
+    jar: &CookieJar<'_>,
     uri: &Origin<'_>,
 ) -> Result<Redirect, InternalError> {
-    // Browse the network in search of a service type.
+    // Browse the network in search of the input service type.
     let receiver = state
         .0
         .browse(SERVICE_TYPE)
         .map_err(|e| InternalError::text(uri, &e.to_string()))?;
 
-    // Clear the database
-    query_error(clear_database(&mut db), uri).await?;
+    // If a service type has been found, search devices and their metadata.
+    let devices_info = search_devices(receiver).await;
 
-    // Run in search of devices and saves them into the database.
-    save_devices(receiver, db, uri).await?;
+    // If some devices have been found, delete every old device from the
+    // database and insert every discovered devices.
+    if !devices_info.is_empty() {
+        // Clear the database
+        query_error(clear_database(&mut db), uri).await?;
 
-    // TODO: Clean up "first time query variable"
+        // Save devices into the database.
+        save_devices(db, devices_info, uri).await?;
+
+        // The discovery phase is completed and every device has been
+        // registered into the database.
+        //
+        // Sets the cookie value to state that the database has been reset.
+        jar.remove_private(DB);
+    }
 
     // Redirect to index
     Ok(Redirect::to(uri!(index)))
@@ -130,14 +158,25 @@ async fn devices_discovery(
 #[get("/")]
 async fn index<'a>(
     mut db: Connection<Devices>,
+    jar: &CookieJar<'_>,
     uri: &Origin<'_>,
 ) -> Result<Template, InternalError> {
-    let first = true;
-    let devices: Vec<Device> = if first {
-        query_error(Device::search_for_devices(&mut db), uri).await?
+    let is_db_init = jar.get_private(DB).is_none();
+
+    // Contact discovered devices with the goal of retrieving their data and
+    // building their controls.
+    let devices = if is_db_init {
+        //query_error(Device::search_for_devices(&mut db), uri).await?
+        let devices = vec![Device::fake_device1(), Device::fake_device2()];
+
+        // Sets the cookie value to state that the database
+        // has been initialized.
+        jar.add_private((DB, "1"));
+
+        devices
     } else {
-        Vec::new()
         //query_error(Device::read_from_database(db), uri).await?
+        vec![Device::fake_device1(), Device::fake_device2()]
     };
 
     Ok(Template::render(

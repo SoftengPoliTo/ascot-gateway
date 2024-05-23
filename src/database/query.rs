@@ -82,13 +82,15 @@ pub(crate) async fn insert_boolean_input(
     value: bool,
     route_id: u16,
 ) -> Result<(), sqlx::Error> {
-    sqlx::query("INSERT INTO booleans(name, default, value, route_id) VALUES ($1, $2, $3, $4)")
-        .bind(name)
-        .bind(default)
-        .bind(value)
-        .bind(route_id)
-        .execute(&mut ***db)
-        .await?;
+    sqlx::query(
+        "INSERT INTO booleans(name, default_value, value, route_id) VALUES ($1, $2, $3, $4)",
+    )
+    .bind(name)
+    .bind(default)
+    .bind(value)
+    .bind(route_id)
+    .execute(&mut ***db)
+    .await?;
     Ok(())
 }
 
@@ -99,7 +101,7 @@ pub(crate) async fn insert_rangeu64_input(
     route_id: u16,
 ) -> Result<(), sqlx::Error> {
     sqlx::query(
-        "INSERT INTO rangesu64(name, min, max, step, default, value, route_id) VALUES ($1, $2, $3, $4, $5, $6, $7)",
+        "INSERT INTO rangesu64(name, min, max, step, default_value, value, route_id) VALUES ($1, $2, $3, $4, $5, $6, $7)",
     )
     .bind(range.name)
     .bind(range.min as i64)
@@ -120,7 +122,7 @@ pub(crate) async fn insert_rangef64_input(
     route_id: u16,
 ) -> Result<(), sqlx::Error> {
     sqlx::query(
-        "INSERT INTO rangesf64(name, min, max, step, default, value, route_id) VALUES ($1, $2, $3, $4, $5, $6, $7)",
+        "INSERT INTO rangesf64(name, min, max, step, default_value, value, route_id) VALUES ($1, $2, $3, $4, $5, $6, $7)",
     )
     .bind(range.name)
     .bind(range.min)

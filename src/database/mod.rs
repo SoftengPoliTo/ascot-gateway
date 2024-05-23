@@ -26,6 +26,26 @@ pub(super) struct Metadata {
     path: String,
 }
 
+impl Metadata {
+    pub(super) fn fake1() -> Self {
+        Self {
+            id: 0,
+            port: 8080,
+            scheme: "http".into(),
+            path: "here".into(),
+        }
+    }
+
+    pub(super) fn fake2() -> Self {
+        Self {
+            id: 0,
+            port: 8080,
+            scheme: "http".into(),
+            path: "here".into(),
+        }
+    }
+}
+
 // Device address.
 #[derive(Debug, FromRow, Serialize, Deserialize)]
 pub(super) struct Address {

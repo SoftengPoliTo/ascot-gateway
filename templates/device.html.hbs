@@ -25,36 +25,38 @@
         <form id="form-data" action="device/{{ device.info.metadata.id }}" method="post">
             <input type="hidden" name="_method" value="put">
             <!-- SLIDERS -->
-            {{#each device.controls}}
-            {{#if (eq input.kind "Slider")}}
+            {{#each device.sliders_u64}}
             <div class="field mt-6 is-centered">
                 <label class="label">{{ input.name }}</label>
                 <div class="control">
                     <input type="range" name="{{ input.name }}" min="{{ input.min }}" max="{{ input.max }}" step="{{ input.step }}" value="{{ input.value }}" onchange="sendForm()">
                 </div>
             </div>
-            {{/if}}
+            {{/each}}
+            {{#each device.sliders_f64}}
+            <div class="field mt-6 is-centered">
+                <label class="label">{{ input.name }}</label>
+                <div class="control">
+                    <input type="range" name="{{ input.name }}" min="{{ input.min }}" max="{{ input.max }}" step="{{ input.step }}" value="{{ input.value }}" onchange="sendForm()">
+                </div>
+            </div>
             {{/each}}
             <!-- CHECKBOXES -->
             <div class="field mt-6 is-grouped is-grouped-centered">
-                {{#each device.controls}}
-                {{#if (eq input.kind "Checkbox")}}
+                {{#each device.checkboxes}}
                     <div class="control">
                         <label class="checkbox">
-                            <input type="checkbox" name="{{ input.name }}" value ="{{ input.value }}" onclick="sendForm()">
+                            <input type="checkbox" name="{{ input.name }}" value ="{{ input.value }}" {{#if input.value }} checked {{/if}} onclick="sendForm()">
                             {{ input.name }}
                         </label>
                     </div>
-                {{/if}}
                 {{/each}}
             </div>
             <!-- BUTTONS -->
             <div class="field mt-6 is-grouped is-grouped-multiline is-grouped-centered">
-                {{#each device.controls}}
+                {{#each device.buttons}}
                 <div class="control">
-                {{#if (eq input.kind "Button")}}
                     <button class="button {{#if input.with_state }} is-warning {{/if}}" name="{{ input.name }}" onclick="sendForm()">{{ input.name }}</button>
-                {{/if}}
                 </div>
                 {{/each}}
             </div>

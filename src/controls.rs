@@ -46,12 +46,16 @@ impl<T> Slider<T> {
 #[derive(Debug, Serialize)]
 pub(crate) struct CheckBox {
     name: String,
-    value: &'static str,
+    value: bool,
 }
 
 impl CheckBox {
-    pub(crate) fn new(name: String, value: &'static str) -> Self {
-        Self { name, value }
+    pub(crate) fn init(name: String) -> Self {
+        Self { name, value: false }
+    }
+
+    pub(crate) fn checked(name: String) -> Self {
+        Self { name, value: true }
     }
 }
 
