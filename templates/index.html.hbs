@@ -10,8 +10,6 @@
         <link rel="icon" type="image/x-icon" href="favicon.ico">
         <!-- Bulma Version 1.0.0 -->
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@1.0.0/css/bulma.min.css">
-        <!-- Bulma slider -->
-        <link rel="stylesheet" href="https://raw.githubusercontent.com/Wikiki/bulma-slider/master/dist/css/bulma-slider.min.css">
         <!-- Font Awesome 6.5.2 -->
         <link
           rel="stylesheet"
@@ -50,11 +48,14 @@
         <!-- END DEVICES -->
 
         {{#each devices}}
-            {{> modal-device }}
-            {{> modal-hazards }}
+        {{> modal-device }}
+
+        {{> modal-hazards }}
         {{/each}}
 
-<script>
+<script type="text/javascript">
+
+// Load modal code.
 document.addEventListener('DOMContentLoaded', () => {
   // Functions to open and close a modal
   function openModal($el) {
@@ -97,6 +98,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 });
+
+{{#unless no_devices_message}}
+// Send form data to a server.
+function sendForm() {
+  document.getElementById("send-form").click();
+}
+{{/unless}}
 
 </script>
     </body>

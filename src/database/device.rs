@@ -244,16 +244,16 @@ impl<'a> Device<'a> {
         use ascot_library::device::DeviceKind;
         use ascot_library::hazards::{CategoryData, HazardData};
         use ascot_library::route::{Input, RestKind, RouteConfig, RouteData};
-        use heapless::Vec;
+        use heapless::{FnvIndexSet, Vec};
 
         let mut routes_configs: Vec<RouteConfig, 16> = Vec::new();
 
-        let mut inputs: Vec<Input<'a>, 16> = Vec::new();
-        let _ = inputs.push(Input::rangef64("brightness", (0., 20., 0.1, 0.)));
-        let _ = inputs.push(Input::boolean("save-energy", false));
+        let mut inputs: FnvIndexSet<Input<'a>, 16> = FnvIndexSet::new();
+        let _ = inputs.insert(Input::rangef64("brightness", (0., 20., 0.1, 0.)));
+        let _ = inputs.insert(Input::boolean("save-energy", false));
 
-        let mut hazards: Vec<HazardData, 16> = Vec::new();
-        let _ = hazards.push(HazardData {
+        let mut hazards: FnvIndexSet<HazardData, 16> = FnvIndexSet::new();
+        let _ = hazards.insert(HazardData {
             id: 0,
             name: "Fire Hazard".into(),
             description: "An Hazard fire".into(),
@@ -263,7 +263,7 @@ impl<'a> Device<'a> {
             },
         });
 
-        let _ = hazards.push(HazardData {
+        let _ = hazards.insert(HazardData {
             id: 1,
             name: "Energy Consumption".into(),
             description: "Consuming energy".into(),
@@ -286,23 +286,23 @@ impl<'a> Device<'a> {
 
         let light_off = RouteConfig {
             rest_kind: RestKind::Put,
-            hazards: Vec::new(),
+            hazards: FnvIndexSet::new(),
             data: RouteData {
                 name: "/off".into(),
                 description: Some("Light off".into()),
                 stateless: false,
-                inputs: Vec::new(),
+                inputs: FnvIndexSet::new(),
             },
         };
 
         let toggle = RouteConfig {
             rest_kind: RestKind::Put,
-            hazards: Vec::new(),
+            hazards: FnvIndexSet::new(),
             data: RouteData {
                 name: "/toggle".into(),
                 description: None,
                 stateless: false,
-                inputs: Vec::new(),
+                inputs: FnvIndexSet::new(),
             },
         };
 
@@ -335,16 +335,16 @@ impl<'a> Device<'a> {
         use ascot_library::device::DeviceKind;
         use ascot_library::hazards::{CategoryData, HazardData};
         use ascot_library::route::{Input, RestKind, RouteConfig, RouteData};
-        use heapless::Vec;
+        use heapless::{FnvIndexSet, Vec};
 
         let mut routes_configs: Vec<RouteConfig, 16> = Vec::new();
 
-        let mut inputs: Vec<Input<'a>, 16> = Vec::new();
-        let _ = inputs.push(Input::rangef64("brightness", (0., 20., 0.1, 0.)));
-        let _ = inputs.push(Input::boolean("save-energy", false));
+        let mut inputs: FnvIndexSet<Input<'a>, 16> = FnvIndexSet::new();
+        let _ = inputs.insert(Input::rangef64("brightness", (0., 20., 0.1, 0.)));
+        let _ = inputs.insert(Input::boolean("save-energy", false));
 
-        let mut hazards: Vec<HazardData, 16> = Vec::new();
-        let _ = hazards.push(HazardData {
+        let mut hazards: FnvIndexSet<HazardData, 16> = FnvIndexSet::new();
+        let _ = hazards.insert(HazardData {
             id: 0,
             name: "Fire Hazard".into(),
             description: "An Hazard fire".into(),
@@ -354,7 +354,7 @@ impl<'a> Device<'a> {
             },
         });
 
-        let _ = hazards.push(HazardData {
+        let _ = hazards.insert(HazardData {
             id: 1,
             name: "Energy Consumption".into(),
             description: "Consuming energy".into(),
@@ -377,21 +377,21 @@ impl<'a> Device<'a> {
 
         let light_off = RouteConfig {
             rest_kind: RestKind::Put,
-            hazards: Vec::new(),
+            hazards: FnvIndexSet::new(),
             data: RouteData {
                 name: "/off".into(),
                 description: Some("Light off".into()),
                 stateless: false,
-                inputs: Vec::new(),
+                inputs: FnvIndexSet::new(),
             },
         };
 
-        let mut inputs2: Vec<Input<'a>, 16> = Vec::new();
-        let _ = inputs2.push(Input::rangeu64("dimmer", (0, 15, 1, 2)));
+        let mut inputs2: FnvIndexSet<Input<'a>, 16> = FnvIndexSet::new();
+        let _ = inputs2.insert(Input::rangeu64("dimmer", (0, 15, 1, 2)));
 
         let toggle = RouteConfig {
             rest_kind: RestKind::Put,
-            hazards: Vec::new(),
+            hazards: FnvIndexSet::new(),
             data: RouteData {
                 name: "/toggle".into(),
                 description: None,

@@ -1,16 +1,19 @@
-{{#each device.data.hazards}}
-<div id="hazard-{{ hazard.id }}" class="modal">
+{{#each this.data.routes_configs}}
+{{#each this.hazards}}
+<div id="hazard-{{ this.id }}" class="modal">
   <div class="modal-background"></div>
 
   <div class="modal-content">
     <div class="box">
-      <p>{{ hazard.name }}</p>
-      {{ hazard.description }}
-      {{ hazard.category.name }}
-      {{ hazard.category.description }}
+      <p>{{ this.name }}</p>
+      {{ this.description }}
+      {{ this.category.name }}
+      {{ this.category.description }}
     </div>
   </div>
 
   <button class="modal-close is-large" aria-label="close"></button>
 </div>
+
+{{/each}}
 {{/each}}

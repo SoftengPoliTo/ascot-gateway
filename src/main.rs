@@ -168,6 +168,7 @@ async fn index<'a>(
     let devices = if is_db_init {
         //query_error(Device::search_for_devices(&mut db), uri).await?
         let devices = vec![Device::fake_device1(), Device::fake_device2()];
+        println!("{:?}", devices);
 
         // Sets the cookie value to state that the database
         // has been initialized.
