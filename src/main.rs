@@ -7,6 +7,9 @@ mod error;
 
 use std::time::Duration;
 
+// Ascot library
+use ascot_library::hazards::HazardsData;
+
 // Service protocol: mDNS-SD
 use mdns_sd::{Receiver, ServiceDaemon, ServiceEvent, ServiceInfo};
 
@@ -168,7 +171,6 @@ async fn index<'a>(
     let devices = if is_db_init {
         //query_error(Device::search_for_devices(&mut db), uri).await?
         let devices = vec![Device::fake_device1(), Device::fake_device2()];
-        println!("{:?}", devices);
 
         // Sets the cookie value to state that the database
         // has been initialized.
@@ -180,11 +182,24 @@ async fn index<'a>(
         vec![Device::fake_device1(), Device::fake_device2()]
     };
 
+    // Avoid having duplicated hazards.
+    let hazards = devices
+        .iter()
+        .fold(HazardsData::init(), |mut hazards, device| {
+            device
+                .data
+                .routes_configs
+                .iter()
+                .for_each(|route| hazards.merge(&route.hazards));
+            hazards
+        });
+
     Ok(Template::render(
         "index",
         context! {
           no_devices_message: devices.is_empty().then_some("No devices available!"),
           devices,
+          hazards,
           discover_route: uri!(devices_discovery),
           discover_message: "Discover devices",
 

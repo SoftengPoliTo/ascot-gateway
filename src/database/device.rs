@@ -242,7 +242,7 @@ impl<'a> Device<'a> {
 
     pub(crate) fn fake_device1() -> Self {
         use ascot_library::device::DeviceKind;
-        use ascot_library::hazards::{CategoryData, HazardData};
+        use ascot_library::hazards::{CategoryData, HazardData, HazardsData};
         use ascot_library::route::{Input, RestKind, RouteConfig, RouteData};
         use heapless::{FnvIndexSet, Vec};
 
@@ -252,8 +252,8 @@ impl<'a> Device<'a> {
         let _ = inputs.insert(Input::rangef64("brightness", (0., 20., 0.1, 0.)));
         let _ = inputs.insert(Input::boolean("save-energy", false));
 
-        let mut hazards: FnvIndexSet<HazardData, 16> = FnvIndexSet::new();
-        let _ = hazards.insert(HazardData {
+        let mut hazards = HazardsData::init();
+        hazards.add(HazardData {
             id: 0,
             name: "Fire Hazard".into(),
             description: "An Hazard fire".into(),
@@ -263,7 +263,7 @@ impl<'a> Device<'a> {
             },
         });
 
-        let _ = hazards.insert(HazardData {
+        hazards.add(HazardData {
             id: 1,
             name: "Energy Consumption".into(),
             description: "Consuming energy".into(),
@@ -286,7 +286,7 @@ impl<'a> Device<'a> {
 
         let light_off = RouteConfig {
             rest_kind: RestKind::Put,
-            hazards: FnvIndexSet::new(),
+            hazards: HazardsData::init(),
             data: RouteData {
                 name: "/off".into(),
                 description: Some("Light off".into()),
@@ -297,7 +297,7 @@ impl<'a> Device<'a> {
 
         let toggle = RouteConfig {
             rest_kind: RestKind::Put,
-            hazards: FnvIndexSet::new(),
+            hazards: HazardsData::init(),
             data: RouteData {
                 name: "/toggle".into(),
                 description: None,
@@ -333,7 +333,7 @@ impl<'a> Device<'a> {
 
     pub(crate) fn fake_device2() -> Self {
         use ascot_library::device::DeviceKind;
-        use ascot_library::hazards::{CategoryData, HazardData};
+        use ascot_library::hazards::{CategoryData, HazardData, HazardsData};
         use ascot_library::route::{Input, RestKind, RouteConfig, RouteData};
         use heapless::{FnvIndexSet, Vec};
 
@@ -343,8 +343,8 @@ impl<'a> Device<'a> {
         let _ = inputs.insert(Input::rangef64("brightness", (0., 20., 0.1, 0.)));
         let _ = inputs.insert(Input::boolean("save-energy", false));
 
-        let mut hazards: FnvIndexSet<HazardData, 16> = FnvIndexSet::new();
-        let _ = hazards.insert(HazardData {
+        let mut hazards = HazardsData::init();
+        hazards.add(HazardData {
             id: 0,
             name: "Fire Hazard".into(),
             description: "An Hazard fire".into(),
@@ -354,7 +354,7 @@ impl<'a> Device<'a> {
             },
         });
 
-        let _ = hazards.insert(HazardData {
+        hazards.add(HazardData {
             id: 1,
             name: "Energy Consumption".into(),
             description: "Consuming energy".into(),
@@ -377,7 +377,7 @@ impl<'a> Device<'a> {
 
         let light_off = RouteConfig {
             rest_kind: RestKind::Put,
-            hazards: FnvIndexSet::new(),
+            hazards: HazardsData::init(),
             data: RouteData {
                 name: "/off".into(),
                 description: Some("Light off".into()),
@@ -391,7 +391,7 @@ impl<'a> Device<'a> {
 
         let toggle = RouteConfig {
             rest_kind: RestKind::Put,
-            hazards: FnvIndexSet::new(),
+            hazards: HazardsData::init(),
             data: RouteData {
                 name: "/toggle".into(),
                 description: None,
@@ -406,7 +406,7 @@ impl<'a> Device<'a> {
 
         Self {
             info: DeviceInfo {
-                metadata: Metadata::fake1(),
+                metadata: Metadata::fake2(),
                 addresses: std::vec::Vec::new(),
             },
             data: DeviceData {

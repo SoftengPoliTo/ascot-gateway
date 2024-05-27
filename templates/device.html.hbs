@@ -1,8 +1,8 @@
 <div class="card">
     <header class="card-header has-background-success is-shadowless">
         <p class="card-header-title is-centered has-text-centered is-size-5-mobile">
-            <font class="is-size-6-mobile">{{ device.data.kind }}</font>
-            <button class="info-icon" data-target="modal-device">
+            <font class="is-size-6-mobile">{{ this.data.kind }}</font>
+            <button class="info-icon" data-target="modal-{{ this.data.kind }}">
                 <span class="icon has-text-white-bis is-size-6-mobile">
                     <i class="fas fa-info-circle" aria-hidden="true"></i>
                 </span>
@@ -11,52 +11,54 @@
     </header>
     <div class="card-content has-text-centered">
         <div class="field is-grouped is-grouped-multiline is-grouped-centered">
-           {{#each device.data.hazards}}
+        {{#each this.data.routes_configs}}
+        {{#each this.hazards}}
            <p class="control">
-               <button class="hazards" data-target="hazard-{{hazard.id}}">
+               <button class="hazards" data-target="hazard-{{this.id}}">
                    <span class="tag is-medium is-danger">
-                       {{hazard.name}}
+                       {{this.name}}
                    </span>
                </button>
            </p>
-           {{/each}}
+        {{/each}}
+        {{/each}}
         </div>
 
-        <form id="form-data" action="device/{{ device.info.metadata.id }}" method="post">
+        <form id="form-data" action="device/{{ this.info.metadata.id }}" method="post">
             <input type="hidden" name="_method" value="put">
             <!-- SLIDERS -->
-            {{#each device.sliders_u64}}
-            <div class="field mt-6 is-centered">
-                <label class="label">{{ input.name }}</label>
+            {{#each this.sliders_u64 }}
+            <div class="field is-centered">
+                <label class="label">{{ this.name }}</label>
                 <div class="control">
-                    <input type="range" name="{{ input.name }}" min="{{ input.min }}" max="{{ input.max }}" step="{{ input.step }}" value="{{ input.value }}" onchange="sendForm()">
+                    <input type="range" name="{{ this.name }}" min="{{ this.min }}" max="{{ this.max }}" step="{{ this.step }}" value="{{ this.value }}" onchange="sendForm()">
                 </div>
             </div>
             {{/each}}
-            {{#each device.sliders_f64}}
-            <div class="field mt-6 is-centered">
-                <label class="label">{{ input.name }}</label>
+            {{#each this.sliders_f64 }}
+            <div class="field is-centered">
+                <label class="label">{{ this.name }}</label>
                 <div class="control">
-                    <input type="range" name="{{ input.name }}" min="{{ input.min }}" max="{{ input.max }}" step="{{ input.step }}" value="{{ input.value }}" onchange="sendForm()">
+                    <input type="range" name="{{ this.name }}" min="{{ this.min }}" max="{{ this.max }}" step="{{ this.step }}" value="{{ this.value }}" onchange="sendForm()">
                 </div>
             </div>
             {{/each}}
             <!-- CHECKBOXES -->
-            <div class="field mt-6 is-grouped is-grouped-centered">
-                {{#each device.checkboxes}}
+            <div class="field is-grouped is-grouped-centered">
+                {{#each this.checkboxes}}
                     <div class="control">
                         <label class="checkbox">
-                            <input type="checkbox" name="{{ input.name }}" value ="{{ input.value }}" {{#if input.value }} checked {{/if}} onclick="sendForm()">
-                            {{ input.name }}
+                            <input type="checkbox" name="{{ this.name }}" value ="{{ this.value }}" {{#if this.value }} checked {{/if}} onclick="sendForm()">
+                            {{ this.name }}
                         </label>
                     </div>
                 {{/each}}
             </div>
             <!-- BUTTONS -->
-            <div class="field mt-6 is-grouped is-grouped-multiline is-grouped-centered">
-                {{#each device.buttons}}
+            <div class="field is-grouped is-grouped-multiline is-grouped-centered">
+                {{#each this.buttons}}
                 <div class="control">
-                    <button class="button {{#if input.with_state }} is-warning {{/if}}" name="{{ input.name }}" onclick="sendForm()">{{ input.name }}</button>
+                    <button class="button {{#if this.with_state }} is-warning {{/if}}" name="{{ this.name }}" onclick="sendForm()">{{ this.name }}</button>
                 </div>
                 {{/each}}
             </div>
@@ -65,6 +67,3 @@
         </form>
     </div>
 </div>
-
-
-

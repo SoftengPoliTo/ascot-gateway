@@ -38,10 +38,10 @@ impl Metadata {
 
     pub(super) fn fake2() -> Self {
         Self {
-            id: 0,
-            port: 8080,
-            scheme: "http".into(),
-            path: "here".into(),
+            id: 1,
+            port: 8085,
+            scheme: "https".into(),
+            path: "second".into(),
         }
     }
 }
