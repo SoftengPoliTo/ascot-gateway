@@ -1,8 +1,7 @@
-use std::borrow::Cow;
 use std::net::IpAddr;
 
 use ascot_library::device::DeviceData;
-use ascot_library::route::InputType;
+use ascot_library::input::InputType;
 
 use rocket_db_pools::{sqlx, Connection};
 
@@ -71,7 +70,7 @@ impl DeviceInfo {
         }
     }
 
-    async fn retrieve<'a>(&mut self) -> Option<DeviceData<'a>> {
+    async fn retrieve<'a>(&mut self) -> Option<DeviceData> {
         // Try each address in order to connect to a device.
         for address in self.addresses.iter_mut() {
             if let Ok(response) = reqwest::get(&address.request).await {
@@ -90,13 +89,13 @@ impl DeviceInfo {
 }
 
 #[derive(Debug, Serialize)]
-pub(crate) struct Device<'a> {
+pub(crate) struct Device {
     // Device info.
     pub(crate) info: DeviceInfo,
     // Device data.
     //
     // Hazards are all here.
-    pub(crate) data: DeviceData<'a>,
+    pub(crate) data: DeviceData,
     // Sliders u64.
     pub(crate) sliders_u64: Vec<Slider<u64>>,
     // Sliders f64.
@@ -107,8 +106,8 @@ pub(crate) struct Device<'a> {
     pub(crate) buttons: Vec<Button>,
 }
 
-impl<'a> Device<'a> {
-    fn new(info: DeviceInfo, data: DeviceData<'a>) -> Self {
+impl Device {
+    fn new(info: DeviceInfo, data: DeviceData) -> Self {
         Self {
             info,
             data,
@@ -158,9 +157,9 @@ impl<'a> Device<'a> {
     // Insert routes.
     async fn insert_routes(mut self, db: &mut Connection<Devices>) -> Result<Self, sqlx::Error> {
         let device_id = self.info.metadata.id;
-        for route in self.data.routes_configs.iter() {
+        for route in self.data.routes.iter() {
             // Save device routes into database.
-            let route_id = insert_route(db, &route.data.name, device_id).await?;
+            let route_id = insert_route(db, route.data.name.as_str(), device_id).await?;
 
             for hazard in route.hazards.iter() {
                 // Save device hazards into database.
@@ -168,18 +167,18 @@ impl<'a> Device<'a> {
             }
 
             // Insert route as a boolean value into the database.
-            insert_boolean_input(db, &route.data.name, false, false, route_id).await?;
+            insert_boolean_input(db, route.data.name.as_str(), false, false, route_id).await?;
 
             // Insert button for a route.
             self.buttons
-                .push(Button::init(Self::clean_route(&route.data.name)));
+                .push(Button::init(Self::clean_route(route.data.name.as_str())));
 
             // Save device inputs into database.
             for input in route.data.inputs.iter() {
                 match &input.datatype {
                     InputType::RangeU64(range) => {
                         let range_db = RangeInputU64 {
-                            name: input.name.to_string(),
+                            name: input.name.as_str().to_string(),
                             min: range.minimum,
                             max: range.maximum,
                             step: range.step,
@@ -189,7 +188,7 @@ impl<'a> Device<'a> {
                         insert_rangeu64_input(db, range_db, route_id).await?;
                         // Insert u64 slider.
                         self.sliders_u64.push(Slider::<u64>::new(
-                            input.name.to_string(),
+                            input.name.as_str().to_string(),
                             range.minimum,
                             range.maximum,
                             range.step,
@@ -198,7 +197,7 @@ impl<'a> Device<'a> {
                     }
                     InputType::RangeF64(range) => {
                         let range_db = RangeInputF64 {
-                            name: input.name.to_string(),
+                            name: input.name.as_str().to_string(),
                             min: range.minimum,
                             max: range.maximum,
                             step: range.step,
@@ -208,7 +207,7 @@ impl<'a> Device<'a> {
                         insert_rangef64_input(db, range_db, route_id).await?;
                         // Insert f64 slider.
                         self.sliders_f64.push(Slider::<f64>::new(
-                            input.name.to_string(),
+                            input.name.as_str().to_string(),
                             range.minimum,
                             range.maximum,
                             range.step,
@@ -216,8 +215,10 @@ impl<'a> Device<'a> {
                         ));
                     }
                     InputType::Bool(default) => {
-                        insert_boolean_input(db, &input.name, *default, *default, route_id).await?;
-                        self.checkboxes.push(CheckBox::init(input.name.to_string()));
+                        insert_boolean_input(db, input.name.as_str(), *default, *default, route_id)
+                            .await?;
+                        self.checkboxes
+                            .push(CheckBox::init(input.name.as_str().to_string()));
                     }
                 }
             }
@@ -243,33 +244,34 @@ impl<'a> Device<'a> {
     pub(crate) fn fake_device1() -> Self {
         use ascot_library::device::DeviceKind;
         use ascot_library::hazards::{CategoryData, HazardData, HazardsData};
-        use ascot_library::route::{Input, RestKind, RouteConfig, RouteData};
-        use heapless::{FnvIndexSet, Vec};
+        use ascot_library::input::{Input, Inputs, InputsData};
+        use ascot_library::route::{RestKind, RouteConfig, RouteData, Routes};
+        use ascot_library::{LongString, MiniString};
 
-        let mut routes_configs: Vec<RouteConfig, 16> = Vec::new();
+        let mut routes = Routes::init();
 
-        let mut inputs: FnvIndexSet<Input<'a>, 16> = FnvIndexSet::new();
-        let _ = inputs.insert(Input::rangef64("brightness", (0., 20., 0.1, 0.)));
-        let _ = inputs.insert(Input::boolean("save-energy", false));
+        let mut inputs = Inputs::init();
+        inputs.add(Input::rangef64("brightness", (0., 20., 0.1, 0.)));
+        inputs.add(Input::boolean("save-energy", false));
 
         let mut hazards = HazardsData::init();
         hazards.add(HazardData {
             id: 0,
-            name: "Fire Hazard".into(),
-            description: "An Hazard fire".into(),
+            name: MiniString::new("Fire Hazard").unwrap(),
+            description: LongString::new("An Hazard fire").unwrap(),
             category: CategoryData {
-                name: "Safety".into(),
-                description: "A safety category".into(),
+                name: MiniString::new("Safety").unwrap(),
+                description: LongString::new("A safety category").unwrap(),
             },
         });
 
         hazards.add(HazardData {
             id: 1,
-            name: "Energy Consumption".into(),
-            description: "Consuming energy".into(),
+            name: MiniString::new("Energy Consumption").unwrap(),
+            description: LongString::new("Consuming energy").unwrap(),
             category: CategoryData {
-                name: "Financial".into(),
-                description: "Reduce Energy".into(),
+                name: MiniString::new("Financial").unwrap(),
+                description: LongString::new("Reduce Energy").unwrap(),
             },
         });
 
@@ -277,10 +279,10 @@ impl<'a> Device<'a> {
             rest_kind: RestKind::Put,
             hazards,
             data: RouteData {
-                name: "/on/<brightness>/<save-energy>".into(),
-                description: Some("Light on".into()),
+                name: MiniString::new("/on/<brightness>/<save-energy>").unwrap(),
+                description: Some(LongString::new("Light on").unwrap()),
                 stateless: false,
-                inputs,
+                inputs: InputsData::from_inputs(&inputs).unwrap(),
             },
         };
 
@@ -288,10 +290,10 @@ impl<'a> Device<'a> {
             rest_kind: RestKind::Put,
             hazards: HazardsData::init(),
             data: RouteData {
-                name: "/off".into(),
-                description: Some("Light off".into()),
+                name: MiniString::new("/off").unwrap(),
+                description: Some(LongString::new("Light off").unwrap()),
                 stateless: false,
-                inputs: FnvIndexSet::new(),
+                inputs: InputsData::init(),
             },
         };
 
@@ -299,26 +301,26 @@ impl<'a> Device<'a> {
             rest_kind: RestKind::Put,
             hazards: HazardsData::init(),
             data: RouteData {
-                name: "/toggle".into(),
+                name: MiniString::new("/toggle").unwrap(),
                 description: None,
                 stateless: false,
-                inputs: FnvIndexSet::new(),
+                inputs: InputsData::init(),
             },
         };
 
-        let _ = routes_configs.push(light_on);
-        let _ = routes_configs.push(light_off);
-        let _ = routes_configs.push(toggle);
+        routes.add(light_on);
+        routes.add(light_off);
+        routes.add(toggle);
 
         Self {
             info: DeviceInfo {
                 metadata: Metadata::fake1(),
-                addresses: std::vec::Vec::new(),
+                addresses: Vec::new(),
             },
             data: DeviceData {
                 kind: DeviceKind::Light,
-                main_route: "/light".into(),
-                routes_configs,
+                main_route: MiniString::new("/light").unwrap(),
+                routes,
             },
             buttons: vec![
                 Button::init(Self::clean_route("/on/<brightness>/<save-energy>")),
@@ -334,33 +336,34 @@ impl<'a> Device<'a> {
     pub(crate) fn fake_device2() -> Self {
         use ascot_library::device::DeviceKind;
         use ascot_library::hazards::{CategoryData, HazardData, HazardsData};
-        use ascot_library::route::{Input, RestKind, RouteConfig, RouteData};
-        use heapless::{FnvIndexSet, Vec};
+        use ascot_library::input::{Input, Inputs, InputsData};
+        use ascot_library::route::{RestKind, RouteConfig, RouteData, Routes};
+        use ascot_library::{LongString, MiniString};
 
-        let mut routes_configs: Vec<RouteConfig, 16> = Vec::new();
+        let mut routes = Routes::init();
 
-        let mut inputs: FnvIndexSet<Input<'a>, 16> = FnvIndexSet::new();
-        let _ = inputs.insert(Input::rangef64("brightness", (0., 20., 0.1, 0.)));
-        let _ = inputs.insert(Input::boolean("save-energy", false));
+        let mut inputs = Inputs::init();
+        inputs.add(Input::rangef64("brightness", (0., 20., 0.1, 0.)));
+        inputs.add(Input::boolean("save-energy", false));
 
         let mut hazards = HazardsData::init();
         hazards.add(HazardData {
             id: 0,
-            name: "Fire Hazard".into(),
-            description: "An Hazard fire".into(),
+            name: MiniString::new("Fire Hazard").unwrap(),
+            description: LongString::new("An Hazard fire").unwrap(),
             category: CategoryData {
-                name: "Safety".into(),
-                description: "A safety category".into(),
+                name: MiniString::new("Safety").unwrap(),
+                description: LongString::new("A safety category").unwrap(),
             },
         });
 
         hazards.add(HazardData {
             id: 1,
-            name: "Energy Consumption".into(),
-            description: "Consuming energy".into(),
+            name: MiniString::new("Energy Consumption").unwrap(),
+            description: LongString::new("Consuming energy").unwrap(),
             category: CategoryData {
-                name: "Financial".into(),
-                description: "Reduce Energy".into(),
+                name: MiniString::new("Financial").unwrap(),
+                description: LongString::new("Reduce Energy").unwrap(),
             },
         });
 
@@ -368,10 +371,10 @@ impl<'a> Device<'a> {
             rest_kind: RestKind::Put,
             hazards,
             data: RouteData {
-                name: "/on/<brightness>/<save-energy>".into(),
-                description: Some("Light on".into()),
+                name: MiniString::new("/on/<brightness>/<save-energy>").unwrap(),
+                description: Some(LongString::new("Light on").unwrap()),
                 stateless: false,
-                inputs,
+                inputs: InputsData::from_inputs(&inputs).unwrap(),
             },
         };
 
@@ -379,40 +382,40 @@ impl<'a> Device<'a> {
             rest_kind: RestKind::Put,
             hazards: HazardsData::init(),
             data: RouteData {
-                name: "/off".into(),
-                description: Some("Light off".into()),
+                name: MiniString::new("/off").unwrap(),
+                description: Some(LongString::new("Light off").unwrap()),
                 stateless: false,
-                inputs: FnvIndexSet::new(),
+                inputs: InputsData::init(),
             },
         };
 
-        let mut inputs2: FnvIndexSet<Input<'a>, 16> = FnvIndexSet::new();
-        let _ = inputs2.insert(Input::rangeu64("dimmer", (0, 15, 1, 2)));
+        let mut inputs2 = Inputs::init();
+        inputs2.add(Input::rangeu64("dimmer", (0, 15, 1, 2)));
 
         let toggle = RouteConfig {
             rest_kind: RestKind::Put,
             hazards: HazardsData::init(),
             data: RouteData {
-                name: "/toggle".into(),
+                name: MiniString::new("/toggle").unwrap(),
                 description: None,
                 stateless: false,
-                inputs: inputs2,
+                inputs: InputsData::from_inputs(&inputs2).unwrap(),
             },
         };
 
-        let _ = routes_configs.push(light_on);
-        let _ = routes_configs.push(light_off);
-        let _ = routes_configs.push(toggle);
+        routes.add(light_on);
+        routes.add(light_off);
+        routes.add(toggle);
 
         Self {
             info: DeviceInfo {
                 metadata: Metadata::fake2(),
-                addresses: std::vec::Vec::new(),
+                addresses: Vec::new(),
             },
             data: DeviceData {
                 kind: DeviceKind::Light,
-                main_route: "/light".into(),
-                routes_configs,
+                main_route: MiniString::new("/light").unwrap(),
+                routes,
             },
             buttons: vec![
                 Button::init(Self::clean_route("/on/<brightness>/<save-energy>")),

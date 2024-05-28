@@ -188,7 +188,7 @@ async fn index<'a>(
         .fold(HazardsData::init(), |mut hazards, device| {
             device
                 .data
-                .routes_configs
+                .routes
                 .iter()
                 .for_each(|route| hazards.merge(&route.hazards));
             hazards
