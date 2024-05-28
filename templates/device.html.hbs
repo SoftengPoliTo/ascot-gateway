@@ -2,7 +2,7 @@
     <header class="card-header has-background-success is-shadowless">
         <p class="card-header-title is-centered has-text-centered is-size-5-mobile">
             <font class="is-size-6-mobile">{{ this.data.kind }}</font>
-            <button class="info-icon" data-target="modal-{{ this.data.kind }}">
+            <button class="info-icon" data-target="modal-{{ this.data.kind }}-{{ this.info.metadata.id }}">
                 <span class="icon has-text-white-bis is-size-6-mobile">
                     <i class="fas fa-info-circle" aria-hidden="true"></i>
                 </span>
@@ -11,7 +11,7 @@
     </header>
     <div class="card-content has-text-centered">
         <div class="field is-grouped is-grouped-multiline is-grouped-centered">
-        {{#each this.data.routes_configs}}
+        {{#each this.data.routes}}
         {{#each this.hazards}}
            <p class="control">
                <button class="hazards" data-target="hazard-{{this.id}}">
