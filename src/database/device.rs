@@ -14,7 +14,7 @@ use crate::controls::{Button, CheckBox, Slider};
 use super::{Address, Devices, Metadata, RangeInputF64, RangeInputU64};
 
 use super::query::{
-    delete_device, insert_boolean_input, insert_hazard, insert_rangef64_input,
+    delete_device, insert_boolean_input, insert_hazard, insert_main_route, insert_rangef64_input,
     insert_rangeu64_input, insert_route, select_device_addresses, select_device_metadata,
 };
 
@@ -155,8 +155,15 @@ impl Device {
     }
 
     // Insert routes.
-    async fn insert_routes(mut self, db: &mut Connection<Devices>) -> Result<Self, sqlx::Error> {
+    pub(crate) async fn insert_routes(
+        mut self,
+        db: &mut Connection<Devices>,
+    ) -> Result<Self, sqlx::Error> {
         let device_id = self.info.metadata.id;
+
+        // Insert main route.
+        insert_main_route(db, self.data.main_route.as_str(), device_id).await?;
+
         for route in self.data.routes.iter() {
             // Save device routes into database.
             let route_id = insert_route(db, route.data.name.as_str(), device_id).await?;
@@ -331,14 +338,18 @@ impl Device {
                 main_route: MiniString::new("/light").unwrap(),
                 routes,
             },
-            buttons: vec![
+            buttons: Vec::new(),
+            sliders_u64: Vec::new(),
+            sliders_f64: Vec::new(),
+            checkboxes: Vec::new(),
+            /*buttons: vec![
                 Button::init(0, Self::clean_route("/on/<brightness>/<save-energy>")),
                 Button::init(1, Self::clean_route("/off")),
                 Button::init(2, Self::clean_route("/toggle")),
             ],
             sliders_u64: Vec::new(),
             sliders_f64: vec![Slider::<f64>::new(0, "brightness".into(), 0., 20., 0.1, 5.)],
-            checkboxes: vec![CheckBox::init(0, "save-energy".into())],
+            checkboxes: vec![CheckBox::init(0, "save-energy".into())],*/
         }
     }
 
@@ -432,14 +443,18 @@ impl Device {
                 main_route: MiniString::new("/light").unwrap(),
                 routes,
             },
-            buttons: vec![
+            buttons: Vec::new(),
+            sliders_u64: Vec::new(),
+            sliders_f64: Vec::new(),
+            checkboxes: Vec::new(),
+            /*buttons: vec![
                 Button::init(0, Self::clean_route("/on/<brightness>/<save-energy>")),
                 Button::init(1, Self::clean_route("/off")),
                 Button::init(2, Self::clean_route("/toggle/:dimmer")),
             ],
             sliders_u64: vec![Slider::<u64>::new(2, "dimmer".into(), 0, 15, 1, 2)],
             sliders_f64: vec![Slider::<f64>::new(0, "brightness".into(), 0., 20., 0.1, 5.)],
-            checkboxes: vec![CheckBox::init(0, "save-energy".into())],
+            checkboxes: vec![CheckBox::init(0, "save-energy".into())],*/
         }
     }
 }

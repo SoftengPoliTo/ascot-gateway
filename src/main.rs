@@ -175,16 +175,21 @@ async fn index<'a>(
         //query_error(Device::search_for_devices(&mut db), uri).await?
         let devices = vec![Device::fake_device1(), Device::fake_device2()];
 
+        // Clear the database
+        query_error(clear_database(&mut db), uri).await?;
+
+        let mut devices2 = Vec::new();
         // Insert device data into the database.
-        for device in devices.iter() {
-            insert_device_data(&mut db, uri, device).await?;
+        for device in devices {
+            let device = insert_device_data(&mut db, uri, device).await?;
+            devices2.push(device);
         }
 
         // Sets the cookie value to state that the database
         // has been initialized.
         jar.add_private((DB, "1"));
 
-        devices
+        devices2
     } else {
         //query_error(Device::read_from_database(db), uri).await?
         vec![Device::fake_device1(), Device::fake_device2()]
@@ -218,8 +223,8 @@ async fn index<'a>(
 async fn insert_device_data(
     db: &mut Connection<Devices>,
     uri: &Origin<'_>,
-    device: &Device,
-) -> Result<(), InternalError> {
+    device: Device,
+) -> Result<Device, InternalError> {
     let id = query_error(
         insert_device(
             db,
@@ -236,7 +241,7 @@ async fn insert_device_data(
         query_error(insert_address(db, address.address.to_string(), id), uri).await?;
     }
 
-    Ok(())
+    query_error(device.insert_routes(db), uri).await
 }
 
 // Inspects changed device data.
