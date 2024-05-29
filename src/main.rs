@@ -181,7 +181,7 @@ async fn index<'a>(
         let mut devices2 = Vec::new();
         // Insert device data into the database.
         for device in devices {
-            let device = insert_device_data(&mut db, uri, device).await?;
+            //let device = insert_device_data(&mut db, uri, device).await?;
             devices2.push(device);
         }
 
