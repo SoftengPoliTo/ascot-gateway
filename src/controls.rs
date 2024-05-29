@@ -2,20 +2,23 @@ use serde::Serialize;
 
 #[derive(Debug, Serialize)]
 pub(crate) struct Button {
+    route_id: u16,
     name: String,
     with_state: bool,
 }
 
 impl Button {
-    pub(crate) fn init(name: String) -> Self {
+    pub(crate) fn init(route_id: u16, name: String) -> Self {
         Self {
+            route_id,
             name,
             with_state: false,
         }
     }
 
-    pub(crate) fn with_state(name: String) -> Self {
+    pub(crate) fn with_state(route_id: u16, name: String) -> Self {
         Self {
+            route_id,
             name,
             with_state: true,
         }
@@ -24,6 +27,7 @@ impl Button {
 
 #[derive(Debug, Serialize)]
 pub(crate) struct Slider<T> {
+    route_id: u16,
     name: String,
     min: T,
     max: T,
@@ -32,8 +36,9 @@ pub(crate) struct Slider<T> {
 }
 
 impl<T> Slider<T> {
-    pub(crate) fn new(name: String, min: T, max: T, step: T, value: T) -> Self {
+    pub(crate) fn new(route_id: u16, name: String, min: T, max: T, step: T, value: T) -> Self {
         Self {
+            route_id,
             name,
             min,
             max,
@@ -45,19 +50,25 @@ impl<T> Slider<T> {
 
 #[derive(Debug, Serialize)]
 pub(crate) struct CheckBox {
+    route_id: u16,
     name: String,
     value: bool,
 }
 
 impl CheckBox {
-    pub(crate) fn init(name: String) -> Self {
-        Self { name, value: false }
+    pub(crate) fn init(route_id: u16, name: String) -> Self {
+        Self {
+            route_id,
+            name,
+            value: false,
+        }
     }
 
-    pub(crate) fn checked(name: String) -> Self {
-        Self { name, value: true }
+    pub(crate) fn checked(route_id: u16, name: String) -> Self {
+        Self {
+            route_id,
+            name,
+            value: true,
+        }
     }
 }
-
-// Search for route id associated with the route, look for inputs for the route,
-// send route.

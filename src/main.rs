@@ -4,6 +4,7 @@ extern crate rocket;
 mod controls;
 mod database;
 mod error;
+mod inputs;
 
 use std::time::Duration;
 
@@ -14,6 +15,7 @@ use ascot_library::hazards::HazardsData;
 use mdns_sd::{Receiver, ServiceDaemon, ServiceEvent, ServiceInfo};
 
 // Web app
+use rocket::form::Form;
 use rocket::http::uri::Origin;
 use rocket::http::CookieJar;
 use rocket::response::Redirect;
@@ -34,6 +36,7 @@ use crate::database::{
     Devices,
 };
 use crate::error::{query_error, InternalError};
+use crate::inputs::DeviceData;
 
 // Ascot service type.
 const SERVICE_TYPE: &str = "_ascot._tcp.local.";
@@ -172,6 +175,11 @@ async fn index<'a>(
         //query_error(Device::search_for_devices(&mut db), uri).await?
         let devices = vec![Device::fake_device1(), Device::fake_device2()];
 
+        // Insert device data into the database.
+        for device in devices.iter() {
+            insert_device_data(&mut db, uri, device).await?;
+        }
+
         // Sets the cookie value to state that the database
         // has been initialized.
         jar.add_private((DB, "1"));
@@ -207,7 +215,29 @@ async fn index<'a>(
     ))
 }
 
-use rocket::form::{self, DataField, Error, Errors, Form, FromForm, ValueField};
+async fn insert_device_data(
+    db: &mut Connection<Devices>,
+    uri: &Origin<'_>,
+    device: &Device,
+) -> Result<(), InternalError> {
+    let id = query_error(
+        insert_device(
+            db,
+            device.info.metadata.port,
+            &device.info.metadata.scheme,
+            &device.info.metadata.path,
+        ),
+        uri,
+    )
+    .await?;
+
+    // Save addresses
+    for address in device.info.addresses.iter() {
+        query_error(insert_address(db, address.address.to_string(), id), uri).await?;
+    }
+
+    Ok(())
+}
 
 // Inspects changed device data.
 //
@@ -215,13 +245,19 @@ use rocket::form::{self, DataField, Error, Errors, Form, FromForm, ValueField};
 // 2. Send the request to a device with the modified data.
 // 3. Save new data into the database.
 // 4. Go to the index
-#[put("/device/<id>", data = "<input>")]
-async fn device_request<'v>(
+#[put("/device/<id>", data = "<inputs>")]
+async fn device_request<'r>(
     id: u16,
-    input: Form<Vec<u16>>,
+    inputs: Form<DeviceData<'r>>,
     db: Connection<Devices>,
     uri: &Origin<'_>,
 ) -> Result<Redirect, InternalError> {
+    // Retrieve form controls values.
+    let inputs = inputs.into_inner();
+
+    // Save changed form controls into database.
+    // TODO: Move downside after the change in the route happened
+
     // Build a REST request from data passed as input.
 
     // Send the request

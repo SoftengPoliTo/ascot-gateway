@@ -29,7 +29,7 @@
             <h2 class="subtitle is-2 is-size-3-mobile has-text-black has-text-centered mt-5 px-2" style="white-space: nowrap;">{{ no_devices_message }}</h2>
             {{else}}
             <div class="grid">
-                {{#each devices}}
+                {{#each devices as |device|}}
                     <div class="cell">
                         {{> device }}
                     </div>
@@ -101,8 +101,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 {{#unless no_devices_message}}
 // Send form data to a server.
-function sendForm() {
-  document.getElementById("send-form").click();
+function sendForm(id) {
+  document.getElementById(id).click();
 }
 {{/unless}}
 

@@ -14,12 +14,12 @@ mdns-sd = "0.10.4"
 reqwest = { version = "0.12", features = ["json"] }
 
 # Web app
-rocket = { version = "0.5.0", features = ["json", "secrets"] }
-rocket_dyn_templates = { version = "0.1.0", features = ["handlebars"] }
+rocket = { version = "0.5.1", features = ["json", "secrets"] }
+rocket_dyn_templates = { version = "0.2.0", features = ["handlebars"] }
 
 # Database
-rocket_db_pools = { version = "0.1.0", features = ["sqlx_sqlite"] }
-sqlx = { version = "0.7.0", default-features = false, features = ["macros", "migrate"] }
+rocket_db_pools = { version = "0.2.0", features = ["sqlx_sqlite"] }
+sqlx = { version = "0.7.4", default-features = false, features = ["macros", "migrate"] }
 
 # Serialize and deserialize methods
 serde = { version = "1.0", features = ["derive"] }

@@ -1,8 +1,8 @@
 <div class="card">
     <header class="card-header has-background-success is-shadowless">
         <p class="card-header-title is-centered has-text-centered is-size-5-mobile">
-            <font class="is-size-6-mobile">{{ this.data.kind }}</font>
-            <button class="info-icon" data-target="modal-{{ this.data.kind }}-{{ this.info.metadata.id }}">
+            <font class="is-size-6-mobile">{{ device.data.kind }}</font>
+            <button class="info-icon" data-target="modal-{{ device.data.kind }}-{{ device.info.metadata.id }}">
                 <span class="icon has-text-white-bis is-size-6-mobile">
                     <i class="fas fa-info-circle" aria-hidden="true"></i>
                 </span>
@@ -11,11 +11,19 @@
     </header>
     <div class="card-content has-text-centered">
         <div class="field is-grouped is-grouped-multiline is-grouped-centered">
-        {{#each this.data.routes}}
+        {{#each device.data.routes}}
         {{#each this.hazards}}
            <p class="control">
                <button class="hazards" data-target="hazard-{{this.id}}">
+                   {{#if (eq this.category.name "Safety")}}
                    <span class="tag is-medium is-danger">
+                   {{/if}}
+                   {{#if (eq this.category.name "Financial")}}
+                   <span class="tag is-medium is-warning">
+                   {{/if}}
+                   {{#if (eq this.category.name "Privacy")}}
+                   <span class="tag is-medium is-info">
+                   {{/if}}
                        {{this.name}}
                    </span>
                </button>
@@ -24,31 +32,34 @@
         {{/each}}
         </div>
 
-        <form id="form-data" action="device/{{ this.info.metadata.id }}" method="post">
+        <form id="form-{{ device.info.metadata.id }}" action="device/{{ device.info.metadata.id }}" method="post">
             <input type="hidden" name="_method" value="put">
             <!-- SLIDERS -->
-            {{#each this.sliders_u64 }}
+            {{#each device.sliders_u64 }}
             <div class="field is-centered">
                 <label class="label">{{ this.name }}</label>
                 <div class="control">
-                    <input type="range" name="{{ this.name }}" min="{{ this.min }}" max="{{ this.max }}" step="{{ this.step }}" value="{{ this.value }}" onchange="sendForm()">
+                    <input type="hidden" name="slidersu64[{{ this.name }}]route" value="{{this.route_id}}">
+                    <input type="range" name="slidersu64[{{ this.name }}]val" min="{{ this.min }}" max="{{ this.max }}" step="{{ this.step }}" value="{{ this.value }}" onchange="sendForm('send-{{ device.info.metadata.id }}')">
                 </div>
             </div>
             {{/each}}
-            {{#each this.sliders_f64 }}
+            {{#each device.sliders_f64 }}
             <div class="field is-centered">
                 <label class="label">{{ this.name }}</label>
                 <div class="control">
-                    <input type="range" name="{{ this.name }}" min="{{ this.min }}" max="{{ this.max }}" step="{{ this.step }}" value="{{ this.value }}" onchange="sendForm()">
+                    <input type="hidden" name="slidersf64[{{ this.name }}]route" value="{{this.route_id}}">
+                    <input type="range" name="slidersf64[{{ this.name }}]val" min="{{ this.min }}" max="{{ this.max }}" step="{{ this.step }}" value="{{ this.value }}" onchange="sendForm('send-{{ device.info.metadata.id }}')">
                 </div>
             </div>
             {{/each}}
             <!-- CHECKBOXES -->
             <div class="field is-grouped is-grouped-centered">
-                {{#each this.checkboxes}}
+                {{#each device.checkboxes}}
                     <div class="control">
                         <label class="checkbox">
-                            <input type="checkbox" name="{{ this.name }}" value ="{{ this.value }}" {{#if this.value }} checked {{/if}} onclick="sendForm()">
+                            <input type="hidden" name="checkboxes[{{ this.name }}]route" value="{{this.route_id}}">
+                            <input type="checkbox" name="checkboxes[{{ this.name }}]val" value="{{ this.value }}" {{#if this.value }} checked {{/if}} onclick="sendForm('send-{{ device.info.metadata.id }}')">
                             {{ this.name }}
                         </label>
                     </div>
@@ -56,14 +67,15 @@
             </div>
             <!-- BUTTONS -->
             <div class="field is-grouped is-grouped-multiline is-grouped-centered">
-                {{#each this.buttons}}
+                {{#each device.buttons}}
                 <div class="control">
-                    <button class="button {{#if this.with_state }} is-warning {{/if}}" name="{{ this.name }}" onclick="sendForm()">{{ this.name }}</button>
+                    <input type="hidden" name="buttons[{{ this.name }}]route" value="{{this.route_id}}">
+                    <button class="button{{#if this.with_state }} is-warning {{/if}}" name="buttons[{{ this.name }}]val" value="{{ this.with_state }}" type="submit">{{ this.name }}</button>
                 </div>
                 {{/each}}
             </div>
             <!-- SEND FORM ON CHANGE -->
-            <div hidden><input id="send-form" type="submit" value=""></div>
+            <div hidden><input id="send-{{ device.info.metadata.id }}" type="submit" value=""></div>
         </form>
     </div>
 </div>

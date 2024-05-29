@@ -24,7 +24,7 @@ pub(crate) struct DeviceAddress {
     // Whether the address is reachable.
     recheable: bool,
     // Address.
-    address: IpAddr,
+    pub(crate) address: IpAddr,
     // Request.
     request: String,
 }
@@ -170,8 +170,10 @@ impl Device {
             insert_boolean_input(db, route.data.name.as_str(), false, false, route_id).await?;
 
             // Insert button for a route.
-            self.buttons
-                .push(Button::init(Self::clean_route(route.data.name.as_str())));
+            self.buttons.push(Button::init(
+                route_id,
+                Self::clean_route(route.data.name.as_str()),
+            ));
 
             // Save device inputs into database.
             for input in route.data.inputs.iter() {
@@ -188,6 +190,7 @@ impl Device {
                         insert_rangeu64_input(db, range_db, route_id).await?;
                         // Insert u64 slider.
                         self.sliders_u64.push(Slider::<u64>::new(
+                            route_id,
                             input.name.as_str().to_string(),
                             range.minimum,
                             range.maximum,
@@ -207,6 +210,7 @@ impl Device {
                         insert_rangef64_input(db, range_db, route_id).await?;
                         // Insert f64 slider.
                         self.sliders_f64.push(Slider::<f64>::new(
+                            route_id,
                             input.name.as_str().to_string(),
                             range.minimum,
                             range.maximum,
@@ -218,7 +222,7 @@ impl Device {
                         insert_boolean_input(db, input.name.as_str(), *default, *default, route_id)
                             .await?;
                         self.checkboxes
-                            .push(CheckBox::init(input.name.as_str().to_string()));
+                            .push(CheckBox::init(route_id, input.name.as_str().to_string()));
                     }
                 }
             }
@@ -314,7 +318,12 @@ impl Device {
 
         Self {
             info: DeviceInfo {
-                metadata: Metadata::fake1(),
+                metadata: Metadata {
+                    id: 0,
+                    port: 8080,
+                    scheme: "http".into(),
+                    path: "here".into(),
+                },
                 addresses: Vec::new(),
             },
             data: DeviceData {
@@ -323,13 +332,13 @@ impl Device {
                 routes,
             },
             buttons: vec![
-                Button::init(Self::clean_route("/on/<brightness>/<save-energy>")),
-                Button::init(Self::clean_route("/off")),
-                Button::init(Self::clean_route("/toggle")),
+                Button::init(0, Self::clean_route("/on/<brightness>/<save-energy>")),
+                Button::init(1, Self::clean_route("/off")),
+                Button::init(2, Self::clean_route("/toggle")),
             ],
-            sliders_f64: vec![Slider::<f64>::new("brightness".into(), 0., 20., 0.1, 5.)],
-            sliders_u64: std::vec::Vec::new(),
-            checkboxes: vec![CheckBox::init("save-energy".into())],
+            sliders_u64: Vec::new(),
+            sliders_f64: vec![Slider::<f64>::new(0, "brightness".into(), 0., 20., 0.1, 5.)],
+            checkboxes: vec![CheckBox::init(0, "save-energy".into())],
         }
     }
 
@@ -409,7 +418,13 @@ impl Device {
 
         Self {
             info: DeviceInfo {
-                metadata: Metadata::fake2(),
+                metadata: Metadata {
+                    id: 1,
+                    port: 8085,
+                    scheme: "https".into(),
+                    path: "second".into(),
+                },
+
                 addresses: Vec::new(),
             },
             data: DeviceData {
@@ -418,13 +433,13 @@ impl Device {
                 routes,
             },
             buttons: vec![
-                Button::init(Self::clean_route("/on/<brightness>/<save-energy>")),
-                Button::init(Self::clean_route("/off")),
-                Button::init(Self::clean_route("/toggle/:dimmer")),
+                Button::init(0, Self::clean_route("/on/<brightness>/<save-energy>")),
+                Button::init(1, Self::clean_route("/off")),
+                Button::init(2, Self::clean_route("/toggle/:dimmer")),
             ],
-            sliders_f64: vec![Slider::<f64>::new("brightness".into(), 0., 20., 0.1, 5.)],
-            sliders_u64: vec![Slider::<u64>::new("dimmer".into(), 0, 15, 1, 2)],
-            checkboxes: vec![CheckBox::init("save-energy".into())],
+            sliders_u64: vec![Slider::<u64>::new(2, "dimmer".into(), 0, 15, 1, 2)],
+            sliders_f64: vec![Slider::<f64>::new(0, "brightness".into(), 0., 20., 0.1, 5.)],
+            checkboxes: vec![CheckBox::init(0, "save-energy".into())],
         }
     }
 }

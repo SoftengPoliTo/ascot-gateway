@@ -19,31 +19,11 @@ pub(super) struct Metadata {
     // Identifier.
     id: u16,
     // Port.
-    port: u16,
+    pub(crate) port: u16,
     // Scheme.
-    scheme: String,
+    pub(crate) scheme: String,
     // Resource path.
-    path: String,
-}
-
-impl Metadata {
-    pub(super) fn fake1() -> Self {
-        Self {
-            id: 0,
-            port: 8080,
-            scheme: "http".into(),
-            path: "here".into(),
-        }
-    }
-
-    pub(super) fn fake2() -> Self {
-        Self {
-            id: 1,
-            port: 8085,
-            scheme: "https".into(),
-            path: "second".into(),
-        }
-    }
+    pub(crate) path: String,
 }
 
 // Device address.
