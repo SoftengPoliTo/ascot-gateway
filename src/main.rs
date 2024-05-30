@@ -5,6 +5,7 @@ mod controls;
 mod database;
 mod error;
 mod inputs;
+mod test;
 
 use std::time::Duration;
 
@@ -30,8 +31,8 @@ use rocket_db_pools::Connection;
 // Tracing
 use tracing::warn;
 
+use crate::database::device::Device;
 use crate::database::{
-    device::Device,
     query::{clear_database, insert_address, insert_device, insert_property},
     Devices,
 };
@@ -171,52 +172,19 @@ async fn index<'a>(
 
     // Contact discovered devices with the goal of retrieving their data and
     // building their controls.
-    //let devices = if is_db_init {
-    //query_error(Device::search_for_devices(&mut db), uri).await?
-    let mut devices = vec![Device::fake_device1(), Device::fake_device2()];
+    let devices = if is_db_init {
+        //query_error(Device::search_for_devices(&mut db), uri).await?
 
-    // Clear the database.
-    query_error(clear_database(&mut db), uri).await?;
+        let devices = crate::test::generate_devices_and_init_db(db, uri).await?;
 
-    // Insert device data into the database.
-    for device in devices.iter_mut() {
-        let id = query_error(
-            insert_device(
-                &mut db,
-                device.info.metadata.port,
-                &device.info.metadata.scheme,
-                &device.info.metadata.path,
-            ),
-            uri,
-        )
-        .await?;
+        // Sets the cookie value to state that the database
+        // has been initialized.
+        jar.add_private((DB, "1"));
 
-        // Save addresses
-        for address in device.info.addresses.iter() {
-            query_error(
-                insert_address(&mut db, address.address.to_string(), id),
-                uri,
-            )
-            .await?;
-        }
-
-        let ids = crate::database::query::select_device_metadata(&mut db)
-            .await
-            .unwrap();
-        println!("{:?}", ids);
-
-        device.insert_routes2(&mut db).await.unwrap();
-    }
-
-    // Sets the cookie value to state that the database
-    // has been initialized.
-    jar.add_private((DB, "1"));
-
-    //devices2
-    /*} else {
-        //query_error(Device::read_from_database(db), uri).await?
-        vec![Device::fake_device1(), Device::fake_device2()]
-    };*/
+        devices
+    } else {
+        query_error(Device::read_from_database(db), uri).await?
+    };
 
     // Avoid having duplicated hazards.
     let hazards = devices

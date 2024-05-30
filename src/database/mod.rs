@@ -17,7 +17,7 @@ pub(crate) struct Devices(sqlx::SqlitePool);
 #[derive(Debug, FromRow, Serialize, Deserialize)]
 pub(super) struct Metadata {
     // Identifier.
-    id: u16,
+    pub(crate) id: u16,
     // Port.
     pub(crate) port: u16,
     // Scheme.
