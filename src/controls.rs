@@ -1,14 +1,16 @@
+use ascot_library::input::Range;
+
 use serde::Serialize;
 
 #[derive(Debug, Serialize)]
-pub(crate) struct Button {
+struct Button {
     route_id: u16,
     name: String,
     with_state: bool,
 }
 
 impl Button {
-    pub(crate) fn init(route_id: u16, name: String) -> Self {
+    fn init(route_id: u16, name: String) -> Self {
         Self {
             route_id,
             name,
@@ -16,7 +18,7 @@ impl Button {
         }
     }
 
-    pub(crate) fn with_state(route_id: u16, name: String) -> Self {
+    fn with_state(route_id: u16, name: String) -> Self {
         Self {
             route_id,
             name,
@@ -26,7 +28,7 @@ impl Button {
 }
 
 #[derive(Debug, Serialize)]
-pub(crate) struct Slider<T> {
+struct Slider<T> {
     route_id: u16,
     name: String,
     min: T,
@@ -36,7 +38,7 @@ pub(crate) struct Slider<T> {
 }
 
 impl<T> Slider<T> {
-    pub(crate) fn new(route_id: u16, name: String, min: T, max: T, step: T, value: T) -> Self {
+    fn new(route_id: u16, name: String, min: T, max: T, step: T, value: T) -> Self {
         Self {
             route_id,
             name,
@@ -49,14 +51,14 @@ impl<T> Slider<T> {
 }
 
 #[derive(Debug, Serialize)]
-pub(crate) struct CheckBox {
+struct CheckBox {
     route_id: u16,
     name: String,
     value: bool,
 }
 
 impl CheckBox {
-    pub(crate) fn init(route_id: u16, name: String) -> Self {
+    fn init(route_id: u16, name: String) -> Self {
         Self {
             route_id,
             name,
@@ -64,11 +66,68 @@ impl CheckBox {
         }
     }
 
-    pub(crate) fn checked(route_id: u16, name: String) -> Self {
+    fn checked(route_id: u16, name: String) -> Self {
         Self {
             route_id,
             name,
             value: true,
         }
+    }
+}
+#[derive(Debug, Serialize, Default)]
+pub(crate) struct Controls {
+    // Sliders u64.
+    sliders_u64: Vec<Slider<u64>>,
+    // Sliders f64.
+    sliders_f64: Vec<Slider<f64>>,
+    // Checkboxes.
+    checkboxes: Vec<CheckBox>,
+    // Buttons.
+    buttons: Vec<Button>,
+}
+
+impl Controls {
+    #[inline]
+    pub(crate) fn init_button(&mut self, route_id: u16, route_name: String) {
+        self.buttons.push(Button::init(route_id, route_name));
+    }
+
+    #[inline]
+    pub(crate) fn init_checkbox(&mut self, route_id: u16, input_name: String) {
+        self.checkboxes.push(CheckBox::init(route_id, input_name));
+    }
+
+    #[inline]
+    pub(crate) fn init_sliders_u64(
+        &mut self,
+        route_id: u16,
+        input_name: String,
+        range: &Range<u64>,
+    ) {
+        self.sliders_u64.push(Slider::<u64>::new(
+            route_id,
+            input_name,
+            range.minimum,
+            range.maximum,
+            range.step,
+            range.default,
+        ));
+    }
+
+    #[inline]
+    pub(crate) fn init_sliders_f64(
+        &mut self,
+        route_id: u16,
+        input_name: String,
+        range: &Range<f64>,
+    ) {
+        self.sliders_f64.push(Slider::<f64>::new(
+            route_id,
+            input_name,
+            range.minimum,
+            range.maximum,
+            range.step,
+            range.default,
+        ));
     }
 }

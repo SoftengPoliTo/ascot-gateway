@@ -7,6 +7,7 @@ use ascot_library::{LongString, MiniString};
 use rocket::http::uri::Origin;
 use rocket_db_pools::Connection;
 
+use crate::controls::Controls;
 use crate::database::device::{Device, DeviceInfo};
 use crate::database::query::{clear_database, insert_address, insert_device};
 use crate::database::{Devices, Metadata};
@@ -92,10 +93,7 @@ fn device1() -> Device {
             main_route: MiniString::new("/light").unwrap(),
             routes,
         },
-        buttons: Vec::new(),
-        sliders_u64: Vec::new(),
-        sliders_f64: Vec::new(),
-        checkboxes: Vec::new(),
+        controls: Controls::default(),
     }
 }
 
@@ -183,10 +181,7 @@ fn device2() -> Device {
             main_route: MiniString::new("/light").unwrap(),
             routes,
         },
-        buttons: Vec::new(),
-        sliders_u64: Vec::new(),
-        sliders_f64: Vec::new(),
-        checkboxes: Vec::new(),
+        controls: Controls::default(),
     }
 }
 

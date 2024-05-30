@@ -183,7 +183,8 @@ async fn index<'a>(
 
         devices
     } else {
-        query_error(Device::read_from_database(db), uri).await?
+        //query_error(Device::read_from_database(db), uri).await?
+        crate::test::generate_devices_and_init_db(db, uri).await?
     };
 
     // Avoid having duplicated hazards.

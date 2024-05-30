@@ -35,7 +35,7 @@
         <form id="form-{{ device.info.metadata.id }}" action="device/{{ device.info.metadata.id }}" method="post">
             <input type="hidden" name="_method" value="put">
             <!-- SLIDERS -->
-            {{#each device.sliders_u64 }}
+            {{#each device.controls.sliders_u64 }}
             <div class="field is-centered">
                 <label class="label">{{ this.name }}</label>
                 <div class="control">
@@ -44,7 +44,7 @@
                 </div>
             </div>
             {{/each}}
-            {{#each device.sliders_f64 }}
+            {{#each device.controls.sliders_f64 }}
             <div class="field is-centered">
                 <label class="label">{{ this.name }}</label>
                 <div class="control">
@@ -55,7 +55,7 @@
             {{/each}}
             <!-- CHECKBOXES -->
             <div class="field is-grouped is-grouped-centered">
-                {{#each device.checkboxes}}
+                {{#each device.controls.checkboxes}}
                     <div class="control">
                         <label class="checkbox">
                             <input type="hidden" name="checkboxes[{{ this.name }}]route" value="{{this.route_id}}">
@@ -67,7 +67,7 @@
             </div>
             <!-- BUTTONS -->
             <div class="field is-grouped is-grouped-multiline is-grouped-centered">
-                {{#each device.buttons}}
+                {{#each device.controls.buttons}}
                 <div class="control">
                     <input type="hidden" name="buttons[{{ this.name }}]route" value="{{this.route_id}}">
                     <button class="button{{#if this.with_state }} is-warning {{/if}}" name="buttons[{{ this.name }}]val" value="{{ this.with_state }}" type="submit">{{ this.name }}</button>
