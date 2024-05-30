@@ -164,7 +164,7 @@ impl Device {
         // Insert main route.
         insert_main_route(db, self.data.main_route.as_str(), device_id).await?;
 
-        for route in self.data.routes.iter() {
+        /*for route in self.data.routes.iter() {
             // Save device routes into database.
             let route_id = insert_route(db, route.data.name.as_str(), device_id).await?;
 
@@ -233,7 +233,7 @@ impl Device {
                     }
                 }
             }
-        }
+        }*/
         Ok(self)
     }
 

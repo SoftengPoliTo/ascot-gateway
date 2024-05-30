@@ -171,29 +171,49 @@ async fn index<'a>(
 
     // Contact discovered devices with the goal of retrieving their data and
     // building their controls.
-    let devices = if is_db_init {
-        //query_error(Device::search_for_devices(&mut db), uri).await?
-        let devices = vec![Device::fake_device1(), Device::fake_device2()];
+    //if is_db_init {
+    //query_error(Device::search_for_devices(&mut db), uri).await?
+    let devices0 = vec![Device::fake_device1(), Device::fake_device2()];
 
-        // Clear the database
-        query_error(clear_database(&mut db), uri).await?;
+    // Clear the database
+    query_error(clear_database(&mut db), uri).await?;
 
-        let mut devices2 = Vec::new();
-        // Insert device data into the database.
-        for device in devices {
-            //let device = insert_device_data(&mut db, uri, device).await?;
-            devices2.push(device);
+    let mut devices = Vec::new();
+    // Insert device data into the database.
+    for device in devices0 {
+        let id = query_error(
+            insert_device(
+                &mut db,
+                device.info.metadata.port,
+                &device.info.metadata.scheme,
+                &device.info.metadata.path,
+            ),
+            uri,
+        )
+        .await?;
+
+        // Save addresses
+        for address in device.info.addresses.iter() {
+            query_error(
+                insert_address(&mut db, address.address.to_string(), id),
+                uri,
+            )
+            .await?;
         }
 
-        // Sets the cookie value to state that the database
-        // has been initialized.
-        jar.add_private((DB, "1"));
+        //let device = query_error(device.insert_routes(&mut db), uri).await?;
 
-        devices2
-    } else {
+        devices.push(device);
+    }
+
+    // Sets the cookie value to state that the database
+    // has been initialized.
+    jar.add_private((DB, "1"));
+
+    /*} else {
         //query_error(Device::read_from_database(db), uri).await?
         vec![Device::fake_device1(), Device::fake_device2()]
-    };
+    };*/
 
     // Avoid having duplicated hazards.
     let hazards = devices
@@ -218,30 +238,6 @@ async fn index<'a>(
 
         },
     ))
-}
-
-async fn insert_device_data(
-    db: &mut Connection<Devices>,
-    uri: &Origin<'_>,
-    device: Device,
-) -> Result<Device, InternalError> {
-    let id = query_error(
-        insert_device(
-            db,
-            device.info.metadata.port,
-            &device.info.metadata.scheme,
-            &device.info.metadata.path,
-        ),
-        uri,
-    )
-    .await?;
-
-    // Save addresses
-    for address in device.info.addresses.iter() {
-        query_error(insert_address(db, address.address.to_string(), id), uri).await?;
-    }
-
-    query_error(device.insert_routes(db), uri).await
 }
 
 // Inspects changed device data.

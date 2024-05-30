@@ -3,6 +3,7 @@ use rocket_db_pools::{sqlx, sqlx::FromRow, Connection};
 use super::{Address, Devices, Metadata, RangeInputF64, RangeInputU64};
 
 // Insert a device in the database returning the associated identifier.
+#[inline]
 pub(crate) async fn insert_device(
     db: &mut Connection<Devices>,
     port: u16,
@@ -18,6 +19,7 @@ pub(crate) async fn insert_device(
 }
 
 // Insert device address.
+#[inline]
 pub(crate) async fn insert_address(
     db: &mut Connection<Devices>,
     address: String,
@@ -32,6 +34,7 @@ pub(crate) async fn insert_address(
 }
 
 // Insert device properties.
+#[inline]
 pub(crate) async fn insert_property(
     db: &mut Connection<Devices>,
     key: &str,
@@ -48,6 +51,7 @@ pub(crate) async fn insert_property(
 }
 
 // Insert device hazard.
+#[inline]
 pub(crate) async fn insert_hazard(
     db: &mut Connection<Devices>,
     hazard_id: u16,
@@ -62,6 +66,7 @@ pub(crate) async fn insert_hazard(
 }
 
 // Insert device main route.
+#[inline]
 pub(crate) async fn insert_main_route(
     db: &mut Connection<Devices>,
     main_route: &str,
@@ -76,6 +81,7 @@ pub(crate) async fn insert_main_route(
 }
 
 // Insert device route.
+#[inline]
 pub(crate) async fn insert_route(
     db: &mut Connection<Devices>,
     route: &str,
@@ -89,6 +95,7 @@ pub(crate) async fn insert_route(
 }
 
 // Insert boolean input for a device.
+#[inline]
 pub(crate) async fn insert_boolean_input(
     db: &mut Connection<Devices>,
     name: &str,
@@ -109,6 +116,7 @@ pub(crate) async fn insert_boolean_input(
 }
 
 // Insert range input for u64.
+#[inline]
 pub(crate) async fn insert_rangeu64_input(
     db: &mut Connection<Devices>,
     range: RangeInputU64,
@@ -130,6 +138,7 @@ pub(crate) async fn insert_rangeu64_input(
 }
 
 // Insert range input for f64.
+#[inline]
 pub(crate) async fn insert_rangef64_input(
     db: &mut Connection<Devices>,
     range: RangeInputF64,
@@ -151,9 +160,10 @@ pub(crate) async fn insert_rangef64_input(
 }
 
 // Delete all data present in a database.
+#[inline]
 pub(crate) async fn clear_database(db: &mut Connection<Devices>) -> Result<(), sqlx::Error> {
-    // Clear the entire database and restart any associated sequence generators.
-    sqlx::query("TRUNCATE devices CASCADE RESTART IDENTITY")
+    // Clear the devices table and each of its sub-tables.
+    sqlx::query("DELETE FROM devices")
         .execute(&mut ***db)
         .await?;
 
@@ -161,13 +171,15 @@ pub(crate) async fn clear_database(db: &mut Connection<Devices>) -> Result<(), s
 }
 
 // Delete a device and its data.
+#[inline]
 pub(crate) async fn delete_device(
     db: &mut Connection<Devices>,
     id: u16,
 ) -> Result<(), sqlx::Error> {
-    // Delete device with the given id.
+    // Delete the device identified by the given id.
     //
-    // Deleting process is propagated on cascade to all the other lines.
+    // The deleting process is propagated on cascade to all the other tables
+    // containing the device id as foreign key.
     sqlx::query("DELETE FROM devices WHERE id = $1")
         .bind(id)
         .execute(&mut ***db)
