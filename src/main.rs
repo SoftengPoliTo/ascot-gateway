@@ -171,16 +171,15 @@ async fn index<'a>(
 
     // Contact discovered devices with the goal of retrieving their data and
     // building their controls.
-    //if is_db_init {
+    //let devices = if is_db_init {
     //query_error(Device::search_for_devices(&mut db), uri).await?
-    let devices0 = vec![Device::fake_device1(), Device::fake_device2()];
+    let mut devices = vec![Device::fake_device1(), Device::fake_device2()];
 
     // Clear the database.
     query_error(clear_database(&mut db), uri).await?;
 
-    let mut devices = Vec::new();
     // Insert device data into the database.
-    for device in devices0 {
+    for device in devices.iter_mut() {
         let id = query_error(
             insert_device(
                 &mut db,
@@ -206,15 +205,14 @@ async fn index<'a>(
             .unwrap();
         println!("{:?}", ids);
 
-        device.insert_routes2(&mut db, id).await.unwrap();
-
-        devices.push(device);
+        device.insert_routes2(&mut db).await.unwrap();
     }
 
     // Sets the cookie value to state that the database
     // has been initialized.
     jar.add_private((DB, "1"));
 
+    //devices2
     /*} else {
         //query_error(Device::read_from_database(db), uri).await?
         vec![Device::fake_device1(), Device::fake_device2()]

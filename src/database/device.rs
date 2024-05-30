@@ -239,14 +239,15 @@ impl Device {
 
     // Insert routes.
     pub(crate) async fn insert_routes2(
-        &self,
+        &mut self,
         db: &mut Connection<Devices>,
-        id: u16,
     ) -> Result<(), sqlx::Error> {
-        // Insert main route.
-        insert_main_route(db, self.data.main_route.as_str(), id).await?;
+        let device_id = self.info.metadata.id;
 
-        /*for route in self.data.routes.iter() {
+        // Insert main route.
+        insert_main_route(db, self.data.main_route.as_str(), device_id).await?;
+
+        for route in self.data.routes.iter() {
             // Save device routes into database.
             let route_id = insert_route(db, route.data.name.as_str(), device_id).await?;
 
@@ -315,7 +316,7 @@ impl Device {
                     }
                 }
             }
-        }*/
+        }
         Ok(())
     }
 
@@ -408,7 +409,7 @@ impl Device {
         Self {
             info: DeviceInfo {
                 metadata: Metadata {
-                    id: 0,
+                    id: 1,
                     port: 8080,
                     scheme: "http".into(),
                     path: "here".into(),
@@ -512,7 +513,7 @@ impl Device {
         Self {
             info: DeviceInfo {
                 metadata: Metadata {
-                    id: 1,
+                    id: 2,
                     port: 8085,
                     scheme: "https".into(),
                     path: "second".into(),
