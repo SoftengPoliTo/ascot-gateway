@@ -237,6 +237,88 @@ impl Device {
         Ok(self)
     }
 
+    // Insert routes.
+    pub(crate) async fn insert_routes2(
+        &self,
+        db: &mut Connection<Devices>,
+        id: u16,
+    ) -> Result<(), sqlx::Error> {
+        // Insert main route.
+        insert_main_route(db, self.data.main_route.as_str(), id).await?;
+
+        /*for route in self.data.routes.iter() {
+            // Save device routes into database.
+            let route_id = insert_route(db, route.data.name.as_str(), device_id).await?;
+
+            for hazard in route.hazards.iter() {
+                // Save device hazards into database.
+                insert_hazard(db, hazard.id, device_id).await?;
+            }
+
+            // Insert route as a boolean value into the database.
+            insert_boolean_input(db, route.data.name.as_str(), false, false, route_id).await?;
+
+            // Insert button for a route.
+            self.buttons.push(Button::init(
+                route_id,
+                Self::clean_route(route.data.name.as_str()),
+            ));
+
+            // Save device inputs into database.
+            for input in route.data.inputs.iter() {
+                match &input.datatype {
+                    InputType::RangeU64(range) => {
+                        let range_db = RangeInputU64 {
+                            name: input.name.as_str().to_string(),
+                            min: range.minimum,
+                            max: range.maximum,
+                            step: range.step,
+                            default: range.default,
+                            value: range.default,
+                        };
+                        insert_rangeu64_input(db, range_db, route_id).await?;
+                        // Insert u64 slider.
+                        self.sliders_u64.push(Slider::<u64>::new(
+                            route_id,
+                            input.name.as_str().to_string(),
+                            range.minimum,
+                            range.maximum,
+                            range.step,
+                            range.default,
+                        ));
+                    }
+                    InputType::RangeF64(range) => {
+                        let range_db = RangeInputF64 {
+                            name: input.name.as_str().to_string(),
+                            min: range.minimum,
+                            max: range.maximum,
+                            step: range.step,
+                            default: range.default,
+                            value: range.default,
+                        };
+                        insert_rangef64_input(db, range_db, route_id).await?;
+                        // Insert f64 slider.
+                        self.sliders_f64.push(Slider::<f64>::new(
+                            route_id,
+                            input.name.as_str().to_string(),
+                            range.minimum,
+                            range.maximum,
+                            range.step,
+                            range.default,
+                        ));
+                    }
+                    InputType::Bool(default) => {
+                        insert_boolean_input(db, input.name.as_str(), *default, *default, route_id)
+                            .await?;
+                        self.checkboxes
+                            .push(CheckBox::init(route_id, input.name.as_str().to_string()));
+                    }
+                }
+            }
+        }*/
+        Ok(())
+    }
+
     // Clean route.
     fn clean_route(route: &str) -> String {
         let no_prefix = match route.strip_prefix("/") {

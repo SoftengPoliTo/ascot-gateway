@@ -10,12 +10,14 @@ pub(crate) async fn insert_device(
     scheme: &str,
     path: &str,
 ) -> Result<u16, sqlx::Error> {
-    sqlx::query_scalar("INSERT INTO devices(port, scheme, path) VALUES ($1, $2, $3) RETURNING id")
-        .bind(port)
-        .bind(scheme)
-        .bind(path)
-        .fetch_one(&mut ***db)
-        .await
+    sqlx::query_scalar(
+        "INSERT INTO devices(port, scheme, path) VALUES ($1, $2, $3) RETURNING rowid",
+    )
+    .bind(port)
+    .bind(scheme)
+    .bind(path)
+    .fetch_one(&mut ***db)
+    .await
 }
 
 // Insert device address.
@@ -74,7 +76,7 @@ pub(crate) async fn insert_main_route(
 ) -> Result<(), sqlx::Error> {
     sqlx::query("INSERT INTO main_routes(route, device_id) VALUES ($1, $2)")
         .bind(main_route)
-        .bind(device_id)
+        .bind(0)
         .execute(&mut ***db)
         .await?;
     Ok(())
@@ -193,7 +195,7 @@ pub(crate) async fn delete_device(
 pub(crate) async fn select_device_metadata(
     db: &mut Connection<Devices>,
 ) -> Result<Vec<Metadata>, sqlx::Error> {
-    sqlx::query_as("SELECT id, port, scheme, path FROM devices ORDER BY id")
+    sqlx::query_as("SELECT rowid, port, scheme, path FROM devices ORDER BY rowid")
         .fetch_all(&mut ***db)
         .await
 }

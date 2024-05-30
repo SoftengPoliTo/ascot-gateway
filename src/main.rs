@@ -175,12 +175,13 @@ async fn index<'a>(
     //query_error(Device::search_for_devices(&mut db), uri).await?
     let devices0 = vec![Device::fake_device1(), Device::fake_device2()];
 
-    // Clear the database
-    query_error(clear_database(&mut db), uri).await?;
+    // Clear the database.
+    //query_error(clear_database(&mut db), uri).await?;
 
     let mut devices = Vec::new();
     // Insert device data into the database.
     for device in devices0 {
+        println!("here");
         let id = query_error(
             insert_device(
                 &mut db,
@@ -192,6 +193,8 @@ async fn index<'a>(
         )
         .await?;
 
+        println!("{id}");
+
         // Save addresses
         for address in device.info.addresses.iter() {
             query_error(
@@ -201,7 +204,12 @@ async fn index<'a>(
             .await?;
         }
 
-        //let device = query_error(device.insert_routes(&mut db), uri).await?;
+        /*let ids = crate::database::query::select_device_metadata(&mut db)
+            .await
+            .unwrap();
+        println!("{:?}", ids);
+
+        device.insert_routes2(&mut db, id).await.unwrap();*/
 
         devices.push(device);
     }
