@@ -207,6 +207,7 @@ impl Device {
                             .await?;
                         self.controls
                             .init_checkbox(route_id, input.name.as_str().to_string());
+                        Self::checkbox(&mut self.controls, db);
                     }
                 }
             }
@@ -219,6 +220,12 @@ impl Device {
                 .init_button(route_id, Self::clean_route(route.data.name.as_str()));
         }
         Ok(())
+    }
+
+    // Insert checkbox.
+    #[inline]
+    fn checkbox(val: &mut Controls) {
+        let a = 5;
     }
 
     // Clean route.

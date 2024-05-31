@@ -1,3 +1,4 @@
+pub(crate) mod controls;
 pub(crate) mod device;
 pub(crate) mod query;
 

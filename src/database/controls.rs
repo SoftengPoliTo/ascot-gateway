@@ -75,7 +75,7 @@ impl CheckBox {
     }
 }
 #[derive(Debug, Serialize, Default)]
-pub(crate) struct Controls {
+pub(crate) struct StateControls {
     // Sliders u64.
     sliders_u64: Vec<Slider<u64>>,
     // Sliders f64.
@@ -86,7 +86,7 @@ pub(crate) struct Controls {
     buttons: Vec<Button>,
 }
 
-impl Controls {
+impl StateControls {
     #[inline]
     pub(crate) fn init_button(&mut self, route_id: u16, route_name: String) {
         self.buttons.push(Button::init(route_id, route_name));

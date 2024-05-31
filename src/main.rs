@@ -1,9 +1,9 @@
 #[macro_use]
 extern crate rocket;
 
-mod controls;
 mod database;
 mod error;
+mod form;
 mod inputs;
 mod test;
 
