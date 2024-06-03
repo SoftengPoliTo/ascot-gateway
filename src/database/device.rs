@@ -9,13 +9,12 @@ use serde::{Deserialize, Serialize};
 
 use tracing::debug;
 
-use crate::controls::Controls;
+use super::{Address, Devices, Metadata};
 
-use super::{Address, Devices, Metadata, RangeInputF64, RangeInputU64};
-
+use super::controls::StateControls;
 use super::query::{
-    delete_device, insert_boolean_input, insert_hazard, insert_main_route, insert_rangef64_input,
-    insert_rangeu64_input, insert_route, select_device_addresses, select_device_metadata,
+    delete_device, insert_hazard, insert_main_route, insert_route, select_device_addresses,
+    select_device_metadata,
 };
 
 // Device addresses.
@@ -37,19 +36,9 @@ impl DeviceAddress {
             request,
         }
     }
-}
 
-#[derive(Debug, Serialize)]
-pub(crate) struct DeviceInfo {
-    // Metadata.
-    pub(crate) metadata: Metadata,
-    // Addresses.
-    pub(crate) addresses: Vec<DeviceAddress>,
-}
-
-impl DeviceInfo {
-    fn new(metadata: Metadata, addresses: Vec<Address>) -> Self {
-        let addresses = addresses
+    fn addresses(metadata: &Metadata, addresses: Vec<Address>) -> Vec<Self> {
+        addresses
             .into_iter()
             .filter_map(|a| {
                 a.address.parse().ok().map(|address| {
@@ -62,78 +51,61 @@ impl DeviceInfo {
                     )
                 })
             })
-            .collect();
-
-        Self {
-            metadata,
-            addresses,
-        }
-    }
-
-    async fn retrieve(mut self) -> Option<(Self, DeviceData)> {
-        // Try each address in order to connect to a device.
-        for address in self.addresses.iter_mut() {
-            if let Ok(response) = reqwest::get(&address.request).await {
-                // When an error occurs deserializing the device information,
-                // skip it.
-                if let Ok(data) = response.json().await {
-                    return Some((self, data));
-                } else {
-                    debug!("Deserialize error for address {:?}", address);
-                }
-            }
-            address.recheable = false;
-        }
-        None
+            .collect()
     }
 }
 
 #[derive(Debug, Serialize)]
 pub(crate) struct Device {
-    // Device info.
-    pub(crate) info: DeviceInfo,
+    // Metadata.
+    pub(crate) metadata: Metadata,
+    // Addresses.
+    pub(crate) addresses: Vec<DeviceAddress>,
     // Device data.
     //
-    // Hazards are all here.
+    // Hazards and routes are all here.
     pub(crate) data: DeviceData,
-    // Device controls.
-    pub(crate) controls: Controls,
+    // Device controls with states.
+    pub(crate) state_controls: StateControls,
 }
 
 impl Device {
-    fn new(info: DeviceInfo, data: DeviceData) -> Self {
-        Self {
-            info,
-            data,
-            controls: Controls::default(),
+    async fn new(metadata: Metadata, mut addresses: Vec<DeviceAddress>) -> Option<Self> {
+        if let Some(data) = Self::retrieve(&mut addresses).await {
+            Some(Self {
+                metadata,
+                addresses,
+                data,
+                state_controls: StateControls::default(),
+            })
+        } else {
+            None
         }
     }
 
     pub(crate) fn is_recheable(&self) -> bool {
-        self.info.addresses.iter().any(|address| address.recheable)
+        self.addresses.iter().any(|address| address.recheable)
     }
 
     // Retrieve all devices for the first time.
     pub(crate) async fn search_for_devices(
         db: &mut Connection<Devices>,
     ) -> Result<Vec<Self>, sqlx::Error> {
-        let devices_info = select_device_metadata(db).await?;
+        let devices_metadata = select_device_metadata(db).await?;
 
         let mut devices = Vec::new();
-        for device_info in devices_info {
+        for device_metadata in devices_metadata {
             // Device id.
-            let device_id = device_info.id;
+            let device_id = device_metadata.id;
 
-            // Retrieve device addresses.
-            let addresses = select_device_addresses(db, device_id).await?;
+            // Retrieve addresses from database.
+            let db_addresses = select_device_addresses(db, device_id).await?;
+
+            // Construct device addresses.
+            let device_addresses = DeviceAddress::addresses(&device_metadata, db_addresses);
 
             // If some data are retrieved, complete device creation.
-            if let Some((device_info, device_data)) =
-                DeviceInfo::new(device_info, addresses).retrieve().await
-            {
-                // Create device.
-                let mut device = Device::new(device_info, device_data);
-
+            if let Some(mut device) = Device::new(device_metadata, device_addresses).await {
                 // Insert routes.
                 device.insert_routes(db).await?;
 
@@ -153,7 +125,7 @@ impl Device {
         &mut self,
         db: &mut Connection<Devices>,
     ) -> Result<(), sqlx::Error> {
-        let device_id = self.info.metadata.id;
+        let device_id = self.metadata.id;
 
         // Insert main route.
         insert_main_route(db, self.data.main_route.as_str(), device_id).await?;
@@ -171,61 +143,36 @@ impl Device {
             for input in route.data.inputs.iter() {
                 match &input.datatype {
                     InputType::RangeU64(range) => {
-                        let range_db = RangeInputU64 {
-                            name: input.name.as_str().to_string(),
-                            min: range.minimum,
-                            max: range.maximum,
-                            step: range.step,
-                            default: range.default,
-                            value: range.default,
-                        };
-                        insert_rangeu64_input(db, range_db, route_id).await?;
-                        self.controls.init_sliders_u64(
-                            route_id,
-                            input.name.as_str().to_string(),
-                            range,
-                        );
+                        self.state_controls
+                            .init_slider_u64(db, route_id, input.name.as_str().to_string(), range)
+                            .await?;
                     }
                     InputType::RangeF64(range) => {
-                        let range_db = RangeInputF64 {
-                            name: input.name.as_str().to_string(),
-                            min: range.minimum,
-                            max: range.maximum,
-                            step: range.step,
-                            default: range.default,
-                            value: range.default,
-                        };
-                        insert_rangef64_input(db, range_db, route_id).await?;
-                        self.controls.init_sliders_f64(
+                        self.state_controls.init_slider_f64(
+                            db,
                             route_id,
                             input.name.as_str().to_string(),
                             range,
                         );
                     }
                     InputType::Bool(default) => {
-                        insert_boolean_input(db, input.name.as_str(), *default, *default, route_id)
-                            .await?;
-                        self.controls
-                            .init_checkbox(route_id, input.name.as_str().to_string());
-                        Self::checkbox(&mut self.controls, db);
+                        self.state_controls
+                            .init_checkbox(db, *default, route_id, input.name.as_str().to_string())
+                            .await?
                     }
                 }
             }
 
-            // Insert route as a boolean value into the database.
-            insert_boolean_input(db, route.data.name.as_str(), false, false, route_id).await?;
-
-            // Initialize a button for a route.
-            self.controls
-                .init_button(route_id, Self::clean_route(route.data.name.as_str()));
+            self.state_controls
+                .init_button(
+                    db,
+                    route.data.name.as_str(),
+                    Self::clean_route(route.data.name.as_str()),
+                    route_id,
+                )
+                .await?;
         }
         Ok(())
-    }
-
-    // Insert checkbox.
-    #[inline]
-    fn checkbox(val: &mut Controls) {
-        let a = 5;
     }
 
     // Clean route.
@@ -240,5 +187,22 @@ impl Device {
                     .unwrap_or(no_prefix)
             })
             .into()
+    }
+
+    async fn retrieve(addresses: &mut [DeviceAddress]) -> Option<DeviceData> {
+        // Try each address in order to connect to a device.
+        for address in addresses.iter_mut() {
+            if let Ok(response) = reqwest::get(&address.request).await {
+                // When an error occurs deserializing the device information,
+                // skip it.
+                if let Ok(data) = response.json().await {
+                    return Some(data);
+                } else {
+                    debug!("Deserialize error for address {:?}", address);
+                }
+            }
+            address.recheable = false;
+        }
+        None
     }
 }

@@ -7,8 +7,8 @@ use ascot_library::{LongString, MiniString};
 use rocket::http::uri::Origin;
 use rocket_db_pools::Connection;
 
-use crate::controls::Controls;
-use crate::database::device::{Device, DeviceInfo};
+use crate::database::controls::StateControls;
+use crate::database::device::Device;
 use crate::database::query::{clear_database, insert_address, insert_device};
 use crate::database::{Devices, Metadata};
 use crate::error::{query_error, InternalError};
@@ -79,21 +79,19 @@ fn device1() -> Device {
     routes.add(toggle);
 
     Device {
-        info: DeviceInfo {
-            metadata: Metadata {
-                id: 1,
-                port: 8080,
-                scheme: "http".into(),
-                path: "here".into(),
-            },
-            addresses: Vec::new(),
+        metadata: Metadata {
+            id: 1,
+            port: 8080,
+            scheme: "http".into(),
+            path: "here".into(),
         },
+        addresses: Vec::new(),
         data: DeviceData {
             kind: DeviceKind::Light,
             main_route: MiniString::new("/light").unwrap(),
             routes,
         },
-        controls: Controls::default(),
+        state_controls: StateControls::default(),
     }
 }
 
@@ -166,22 +164,20 @@ fn device2() -> Device {
     routes.add(toggle);
 
     Device {
-        info: DeviceInfo {
-            metadata: Metadata {
-                id: 2,
-                port: 8085,
-                scheme: "https".into(),
-                path: "second".into(),
-            },
-
-            addresses: Vec::new(),
+        metadata: Metadata {
+            id: 2,
+            port: 8085,
+            scheme: "https".into(),
+            path: "second".into(),
         },
+
+        addresses: Vec::new(),
         data: DeviceData {
             kind: DeviceKind::Light,
             main_route: MiniString::new("/light").unwrap(),
             routes,
         },
-        controls: Controls::default(),
+        state_controls: StateControls::default(),
     }
 }
 
@@ -199,16 +195,16 @@ pub(crate) async fn generate_devices_and_init_db(
         let id = query_error(
             insert_device(
                 &mut db,
-                device.info.metadata.port,
-                &device.info.metadata.scheme,
-                &device.info.metadata.path,
+                device.metadata.port,
+                &device.metadata.scheme,
+                &device.metadata.path,
             ),
             uri,
         )
         .await?;
 
         // Save addresses
-        for address in device.info.addresses.iter() {
+        for address in device.addresses.iter() {
             query_error(
                 insert_address(&mut db, address.address.to_string(), id),
                 uri,

@@ -1,79 +1,14 @@
 use ascot_library::input::Range;
 
+use rocket_db_pools::Connection;
+
 use serde::Serialize;
 
-#[derive(Debug, Serialize)]
-struct Button {
-    route_id: u16,
-    name: String,
-    with_state: bool,
-}
+use crate::form::{Button, CheckBox, Slider};
 
-impl Button {
-    fn init(route_id: u16, name: String) -> Self {
-        Self {
-            route_id,
-            name,
-            with_state: false,
-        }
-    }
+use super::query::{insert_boolean_input, insert_rangef64_input, insert_rangeu64_input};
+use super::{Devices, RangeInputF64, RangeInputU64};
 
-    fn with_state(route_id: u16, name: String) -> Self {
-        Self {
-            route_id,
-            name,
-            with_state: true,
-        }
-    }
-}
-
-#[derive(Debug, Serialize)]
-struct Slider<T> {
-    route_id: u16,
-    name: String,
-    min: T,
-    max: T,
-    step: T,
-    value: T,
-}
-
-impl<T> Slider<T> {
-    fn new(route_id: u16, name: String, min: T, max: T, step: T, value: T) -> Self {
-        Self {
-            route_id,
-            name,
-            min,
-            max,
-            step,
-            value,
-        }
-    }
-}
-
-#[derive(Debug, Serialize)]
-struct CheckBox {
-    route_id: u16,
-    name: String,
-    value: bool,
-}
-
-impl CheckBox {
-    fn init(route_id: u16, name: String) -> Self {
-        Self {
-            route_id,
-            name,
-            value: false,
-        }
-    }
-
-    fn checked(route_id: u16, name: String) -> Self {
-        Self {
-            route_id,
-            name,
-            value: true,
-        }
-    }
-}
 #[derive(Debug, Serialize, Default)]
 pub(crate) struct StateControls {
     // Sliders u64.
@@ -88,22 +23,51 @@ pub(crate) struct StateControls {
 
 impl StateControls {
     #[inline]
-    pub(crate) fn init_button(&mut self, route_id: u16, route_name: String) {
-        self.buttons.push(Button::init(route_id, route_name));
-    }
-
-    #[inline]
-    pub(crate) fn init_checkbox(&mut self, route_id: u16, input_name: String) {
-        self.checkboxes.push(CheckBox::init(route_id, input_name));
-    }
-
-    #[inline]
-    pub(crate) fn init_sliders_u64(
+    pub(crate) async fn init_button(
         &mut self,
+        db: &mut Connection<Devices>,
+        route_name: &str,
+        cleaned_route_name: String,
+        route_id: u16,
+    ) -> Result<(), sqlx::Error> {
+        insert_boolean_input(db, route_name, false, false, route_id).await?;
+
+        self.buttons
+            .push(Button::init(route_id, cleaned_route_name));
+        Ok(())
+    }
+
+    #[inline]
+    pub(crate) async fn init_checkbox(
+        &mut self,
+        db: &mut Connection<Devices>,
+        default: bool,
+        route_id: u16,
+        input_name: String,
+    ) -> Result<(), sqlx::Error> {
+        insert_boolean_input(db, &input_name, default, default, route_id).await?;
+        self.checkboxes.push(CheckBox::init(route_id, input_name));
+        Ok(())
+    }
+
+    #[inline]
+    pub(crate) async fn init_slider_u64(
+        &mut self,
+        db: &mut Connection<Devices>,
         route_id: u16,
         input_name: String,
         range: &Range<u64>,
-    ) {
+    ) -> Result<(), sqlx::Error> {
+        let range_db = RangeInputU64 {
+            name: input_name.clone(),
+            min: range.minimum,
+            max: range.maximum,
+            step: range.step,
+            default: range.default,
+            value: range.default,
+        };
+        insert_rangeu64_input(db, range_db, route_id).await?;
+
         self.sliders_u64.push(Slider::<u64>::new(
             route_id,
             input_name,
@@ -112,15 +76,27 @@ impl StateControls {
             range.step,
             range.default,
         ));
+        Ok(())
     }
 
     #[inline]
-    pub(crate) fn init_sliders_f64(
+    pub(crate) async fn init_slider_f64(
         &mut self,
+        db: &mut Connection<Devices>,
         route_id: u16,
         input_name: String,
         range: &Range<f64>,
-    ) {
+    ) -> Result<(), sqlx::Error> {
+        let range_db = RangeInputF64 {
+            name: input_name.clone(),
+            min: range.minimum,
+            max: range.maximum,
+            step: range.step,
+            default: range.default,
+            value: range.default,
+        };
+        insert_rangef64_input(db, range_db, route_id).await?;
+
         self.sliders_f64.push(Slider::<f64>::new(
             route_id,
             input_name,
@@ -129,5 +105,6 @@ impl StateControls {
             range.step,
             range.default,
         ));
+        Ok(())
     }
 }
