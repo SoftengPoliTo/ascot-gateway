@@ -55,7 +55,7 @@
             {{/each}}
             <!-- CHECKBOXES -->
             <div class="field is-grouped is-grouped-centered">
-                {{#each device.controls.checkboxes as |checkbox|}}
+                {{#each device.state_controls.checkboxes as |checkbox|}}
                     <div class="control">
                         <label class="checkbox">
                             <input type="hidden" name="checkboxes[{{ checkbox.name }}]route" value="{{checkbox.route_id}}">

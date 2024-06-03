@@ -148,12 +148,9 @@ impl Device {
                             .await?;
                     }
                     InputType::RangeF64(range) => {
-                        self.state_controls.init_slider_f64(
-                            db,
-                            route_id,
-                            input.name.as_str().to_string(),
-                            range,
-                        );
+                        self.state_controls
+                            .init_slider_f64(db, route_id, input.name.as_str().to_string(), range)
+                            .await?;
                     }
                     InputType::Bool(default) => {
                         self.state_controls
