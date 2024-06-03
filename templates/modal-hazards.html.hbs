@@ -1,15 +1,15 @@
-{{#each hazards}}
-<div id="hazard-{{ this.id }}" class="modal">
+{{#each hazards as |hazard|}}
+<div id="hazard-{{ hazard.id }}" class="modal">
   <div class="modal-background"></div>
 
   <div class="modal-content">
     <div class="box">
       <div class="content">
-          <h1>{{ this.name }}</h1>
+          <h1>{{ hazard.name }}</h1>
 
-          <p>{{ this.description }}</p>
-          <p>{{ this.category.name }}</p>
-          <p>{{ this.category.description }}</p>
+          <p>{{ hazard.description }}</p>
+          <p>{{ hazard.category.name }}</p>
+          <p>{{ hazard.category.description }}</p>
       </div>
     </div>
   </div>
