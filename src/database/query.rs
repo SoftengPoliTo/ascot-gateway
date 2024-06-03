@@ -2,6 +2,15 @@ use rocket_db_pools::{sqlx, sqlx::FromRow, Connection};
 
 use super::{Address, Devices, Metadata, RangeInputF64, RangeInputU64};
 
+// Checks whether the database is empty.
+#[inline]
+pub(crate) async fn is_db_empty(db: &mut Connection<Devices>) -> Result<bool, sqlx::Error> {
+    sqlx::query_scalar("SELECT COUNT(*) from devices")
+        .fetch_one(&mut ***db)
+        .await
+        .map(|count: u16| count == 0)
+}
+
 // Insert a device in the database returning the associated identifier.
 #[inline]
 pub(crate) async fn insert_device(

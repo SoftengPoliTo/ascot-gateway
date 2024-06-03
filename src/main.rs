@@ -18,7 +18,6 @@ use mdns_sd::{Receiver, ServiceDaemon, ServiceEvent, ServiceInfo};
 // Web app
 use rocket::form::Form;
 use rocket::http::uri::Origin;
-use rocket::http::CookieJar;
 use rocket::response::Redirect;
 use rocket::State;
 
@@ -31,9 +30,8 @@ use rocket_db_pools::Connection;
 // Tracing
 use tracing::warn;
 
-use crate::database::device::Device;
 use crate::database::{
-    query::{clear_database, insert_address, insert_device, insert_property},
+    query::{clear_database, insert_address, insert_device, insert_property, is_db_empty},
     Devices,
 };
 use crate::error::{query_error, InternalError};
@@ -51,9 +49,6 @@ const DEFAULT_SCHEME: &str = "http";
 // Requests to the servers for well-known services or information are available
 // at URLs consistent well-known locations across servers.
 const WELL_KNOWN_URI: &str = "/.well-known/ascot";
-
-// Cookies key
-const DB: &str = "db";
 
 // Search ascot devices.
 async fn search_devices(receiver: Receiver<ServiceEvent>) -> Vec<ServiceInfo> {
@@ -130,7 +125,6 @@ async fn save_devices(
 async fn devices_discovery(
     state: &State<ServiceState>,
     mut db: Connection<Devices>,
-    jar: &CookieJar<'_>,
     uri: &Origin<'_>,
 ) -> Result<Redirect, InternalError> {
     // Browse the network in search of the input service type.
@@ -150,12 +144,6 @@ async fn devices_discovery(
 
         // Save devices into the database.
         save_devices(db, devices_info, uri).await?;
-
-        // The discovery phase is completed and every device has been
-        // registered into the database.
-        //
-        // Sets the cookie value to state that the database has been reset.
-        jar.remove_private(DB);
     }
 
     // Redirect to index
@@ -165,23 +153,16 @@ async fn devices_discovery(
 #[get("/")]
 async fn index<'a>(
     mut db: Connection<Devices>,
-    jar: &CookieJar<'_>,
     uri: &Origin<'_>,
 ) -> Result<Template, InternalError> {
-    let is_db_init = jar.get_private(DB).is_none();
+    // Check whether the database is empty.
+    let is_db_empty = query_error(is_db_empty(&mut db), uri).await?;
 
     // Contact discovered devices with the goal of retrieving their data and
     // building their controls.
-    let devices = if is_db_init {
+    let devices = if is_db_empty {
         //query_error(Device::search_for_devices(&mut db), uri).await?
-
-        let devices = crate::test::generate_devices_and_init_db(db, uri).await?;
-
-        // Sets the cookie value to state that the database
-        // has been initialized.
-        jar.add_private((DB, "1"));
-
-        devices
+        crate::test::generate_devices_and_init_db(db, uri).await?
     } else {
         //query_error(Device::read_from_database(db), uri).await?
         crate::test::generate_devices_and_init_db(db, uri).await?
